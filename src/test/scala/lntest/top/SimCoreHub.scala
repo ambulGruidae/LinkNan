@@ -21,10 +21,13 @@ class SimCoreHubExtIO(cioP:TLBundleParameters, dcP:TLBundleParameters, icP:TLBun
 
 class SimCoreHub(params:CoreBlockTestIOParams)(implicit p: Parameters) extends LazyModule {
   private val icacheImplParams = p(XSCoreParamsKey).icacheParameters
+  private val l2tlbImplParams = p(XSCoreParamsKey).l2tlbParameters
+  private val icacheOutstanding = icacheImplParams.nMissEntries + icacheImplParams.nReleaseEntries + icacheImplParams.nPrefetchEntries
+  private val ptwOustanding = l2tlbImplParams.llptwsize + 1
   private val icacheDplmcParams = TLMasterPortParameters.v1(
     Seq(TLMasterParameters.v1(
       name = "icache",
-      sourceId = IdRange(0, icacheImplParams.nMissEntries + icacheImplParams.nReleaseEntries + icacheImplParams.nPrefetchEntries),
+      sourceId = IdRange(0, icacheOutstanding + ptwOustanding),
     )),
     requestFields = Seq(),
     echoFields = Seq(),
