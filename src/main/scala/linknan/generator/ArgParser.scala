@@ -15,6 +15,7 @@ object ArgParser {
       val res = cfgStr match {
         case "reduced" => new ReducedConfig
         case "minimal" => new MinimalConfig
+        case "spec" => new SpecConfig
         case _ => new FullConfig
       }
       val newArgs = args.zipWithIndex.filterNot(e => e._2 == pos || e._2 == (pos + 1)).map(_._1)

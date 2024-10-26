@@ -1,6 +1,6 @@
 package lntest.top
 
-import linknan.generator.{FullConfig, MinimalConfig, PrefixKey, ReducedConfig, RemoveCoreKey}
+import linknan.generator._
 import org.chipsalliance.cde.config.Parameters
 import xs.utils.perf.DebugOptionsKey
 
@@ -16,6 +16,7 @@ object SimArgParser {
       val res = cfgStr match {
         case "reduced" => new ReducedConfig
         case "full" => new FullConfig
+        case "spec" => new SpecConfig
         case _ => new MinimalConfig
       }
       val newArgs = args.zipWithIndex.filterNot(e => e._2 == pos || e._2 == (pos + 1)).map(_._1)

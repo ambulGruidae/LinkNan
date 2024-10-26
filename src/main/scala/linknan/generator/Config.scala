@@ -135,3 +135,7 @@ class ReducedConfig extends Config(
 class MinimalConfig extends Config(
   new L1DConfig ++ new L2Config(256, 8) ++ new LLCConfig(2, 8) ++ new MinimalNocConfig
 )
+
+class SpecConfig extends Config(
+  new L1DConfig ++ new L2Config ++ new LLCConfig ++ new MinimalNocConfig
+)
