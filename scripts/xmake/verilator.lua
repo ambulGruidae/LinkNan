@@ -4,20 +4,12 @@ import("core.base.task")
 
 function emu_comp()
   local abs_base = os.curdir()
-  local ds_home = option.get("dramsim3_home")
-  local ds_cfg = path.join(ds_home, "configs", "XiangShan.ini")
-  local ds_a = path.join(ds_home, "build", "libdramsim3.a")
-  if option.get("dramsim3") then
-    local ds_home = option.get("dramsim3_home")
-    assert(os.exists(ds_cfg))
-    assert(os.exists(ds_a))
-  end
   local chisel_dep_srcs = os.iorun("find " .. abs_base .. " -name \"*.scala\""):split('\n')
   table.join2(chisel_dep_srcs, {path.join(abs_base, "build.sc")})
   table.join2(chisel_dep_srcs, {path.join(abs_base, "xmake.lua")})
 
+  local build_dir = path.join(abs_base, "build")
   depend.on_changed(function ()
-    local build_dir = path.join(abs_base, "build")
     if os.exists(build_dir) then os.rmdir(build_dir) end
     task.run("soc", {sim = true, config = option.get("config"), dramsim3 = option.get("dramsim3")}) 
   end,{
@@ -85,13 +77,12 @@ function emu_comp()
   if option.get("sparse_mem") then
     cxx_flags = cxx_flags .. " -DCONFIG_USE_SPARSEMM"
   end
+  local dramsim_a = ""
   if option.get("dramsim3") then
-    cxx_flags = cxx_flags .. " -I" .. ds_home
-    cxx_flags = cxx_flags .. " -DWITH_DRAMSIM3"
-    cxx_flags = cxx_flags .. " -DDRAMSIM3_CONFIG=\"" .. ds_cfg .. "\""
-    cxx_flags = cxx_flags .. " -DDRAMSIM3_OUTDIR=\"" .. design_csrc .. "\""
-
-    cxx_ldflags = cxx_ldflags .. " " .. ds_a
+    local ds_cxx_flags, ds_cxx_ldflags = import("dramsim").dramsim(option.get("dramsim3_home"), build_dir)
+    cxx_flags = cxx_flags .. ds_cxx_flags
+    dramsim_a = ds_cxx_ldflags
+    cxx_ldflags = cxx_ldflags .. ds_cxx_ldflags
   end
   if option.get("threads") then
     cxx_flags = cxx_flags .. " -DEMU_THREAD=" .. option.get("threads")
@@ -119,6 +110,7 @@ function emu_comp()
 
   local verilator_depends_files = vsrc
   table.join2(verilator_depends_files, { path.join(abs_base, "scripts", "xmake", "verilator.lua") })
+  table.join2(verilator_depends_files, { path.join(abs_base, "scripts", "xmake", "dramsim.lua") })
 
   depend.on_changed(function()
     print(verilator_flags)
@@ -127,11 +119,10 @@ function emu_comp()
     files = verilator_depends_files,
     dependfile = path.join(comp_dir, "verilator.ln.dep")
   })
-  os.rm("vcs_cmd.sh")
 
   local gmake_depend_files = csrc
   table.join2(gmake_depend_files, headers)
-  table.join2(gmake_depend_files, { path.join(comp_dir, "VSimTop.mk") })
+  table.join2(gmake_depend_files, {path.join(comp_dir, "VSimTop.mk"), dramsim_a})
 
   depend.on_changed(function()
     local make_opts = {"VM_PARALLEL_BUILDS=1",  "OPT_FAST=-O3"}
@@ -141,8 +132,7 @@ function emu_comp()
     files = gmake_depend_files,
     dependfile = path.join(comp_dir, "emu.ln.dep")
   })
-  
-  local build_dir = path.join(abs_base, "build")
+
   local emu_target = path.join(build_dir, "emu")
   if not os.exists(emu_target) then
     os.ln(path.join(comp_dir, "emu"), emu_target)

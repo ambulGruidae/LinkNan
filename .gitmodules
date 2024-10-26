@@ -28,3 +28,7 @@
 [submodule "ready-to-run"]
 	path = ready-to-run
 	url = https://github.com/Siudya/ready-to-run
+[submodule "dependencies/dramsim"]
+	path = dependencies/dramsim
+	url = https://github.com/OpenXiangShan/DRAMsim3
+	branch = cosim-kmh
