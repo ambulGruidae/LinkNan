@@ -162,6 +162,8 @@ end)
 task("init", function()
   on_run(function()
     os.exec("git submodule update --init")
+    os.cd(path.join("dependencies", "nanhu"))
+    os.exec("git submodule update --init fudian")
   end)
   set_menu {}
 end)

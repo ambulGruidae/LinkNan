@@ -66,10 +66,6 @@ object difftest extends SbtModule with CommonModule {
   override def millSourcePath = os.pwd / "dependencies" / "difftest"
 }
 
-object fudian extends SbtModule with CommonModule {
-  override def millSourcePath = os.pwd / "dependencies" / "fudian"
-}
-
 object zhujiang extends SbtModule with CommonModule {
   override def millSourcePath = os.pwd / "dependencies" / "zhujiang"
   override def moduleDeps = super.moduleDeps ++ Seq(rocketchip, xsutils)
@@ -83,6 +79,10 @@ object nhl2 extends SbtModule with CommonModule {
 object nanhu extends SbtModule with CommonModule {
   override def millSourcePath = os.pwd / "dependencies" / "nanhu"
   override def moduleDeps = super.moduleDeps ++ Seq(rocketchip, xsutils, fudian, difftest)
+
+  object fudian extends SbtModule with CommonModule {
+    override def millSourcePath = os.pwd / "dependencies" / "nanhu" / "fudian"
+  }
 }
 
 object linknan extends SbtModule with CommonModule {

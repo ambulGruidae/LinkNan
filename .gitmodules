@@ -1,9 +1,6 @@
 [submodule "dependencies/nanhu"]
 	path = dependencies/nanhu
 	url = https://github.com/Siudya/Nanhu
-[submodule "dependencies/fudian"]
-	path = dependencies/fudian
-	url = https://github.com/Siudya/fudian
 [submodule "dependencies/hardfloat"]
 	path = dependencies/hardfloat
 	url = https://github.com/ucb-bar/berkeley-hardfloat
