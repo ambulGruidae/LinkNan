@@ -15,7 +15,7 @@ import xijiang.Node
 import xs.utils.tl.{TLUserKey, TLUserParams}
 import xs.utils.{ClockManagerWrapper, ResetGen}
 import zhujiang.{ZJParametersKey, ZJRawModule}
-import zhujiang.device.cluster.interconnect.ClusterDeviceBundle
+import linknan.cluster.interconnect.ClusterDeviceBundle
 
 class CoreBlockTestIO(params:CoreBlockTestIOParams)(implicit p:Parameters) extends Bundle {
   val clock = Output(Clock())

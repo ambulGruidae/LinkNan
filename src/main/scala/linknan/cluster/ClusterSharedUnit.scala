@@ -1,7 +1,6 @@
 package linknan.cluster
 
 import chisel3._
-import chisel3.util._
 import SimpleL2.Configs.L2ParamKey
 import SimpleL2.SimpleL2CacheDecoupled
 import freechips.rocketchip.diplomacy._
@@ -11,10 +10,8 @@ import org.chipsalliance.cde.config.Parameters
 import xiangshan.HasXSParameter
 import xijiang.Node
 import xs.utils.ResetGen
-import xs.utils.tl.TLNanhuBusField
 import zhujiang.chi.{DataFlit, ReqFlit, RespFlit, SnoopFlit}
-import zhujiang.device.cluster.ClusterInterconnectComplex
-import zhujiang.device.cluster.interconnect.ClusterDeviceBundle
+import linknan.cluster.interconnect.ClusterDeviceBundle
 import zhujiang.tilelink.TilelinkParams
 
 class ClusterSharedUnit(cioEdge: TLEdgeIn, l2EdgeIn: TLEdgeIn, node:Node)(implicit p:Parameters) extends LazyModule with BindingScope with HasXSParameter {

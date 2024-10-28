@@ -11,7 +11,7 @@ import zhujiang.{ZJRawModule, Zhujiang}
 import org.chipsalliance.cde.config.Parameters
 import sifive.enterprise.firrtl.NestedPrefixModulesAnnotation
 import zhujiang.axi.AxiBundle
-import zhujiang.device.cluster.interconnect.DftWires
+import zhujiang.DftWires
 
 class LNTop(implicit p:Parameters) extends ZJRawModule with ImplicitClock with ImplicitReset {
   override protected val implicitClock = Wire(Clock())

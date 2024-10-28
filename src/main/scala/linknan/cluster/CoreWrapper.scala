@@ -13,7 +13,7 @@ import xiangshan.{BusErrorUnitInfo, HasXSParameter, XSCore}
 import xs.utils.{RegNextN, ResetGen}
 import xs.utils.tl.TLNanhuBusKey
 import zhujiang.ZJParametersKey
-import zhujiang.device.cluster.interconnect.DftWires
+import zhujiang.DftWires
 
 class CoreWrapperIO(ioParams:TLBundleParameters, l2Params: TLBundleParameters)(implicit p:Parameters) extends Bundle {
   val clock = Input(Clock())

@@ -11,7 +11,7 @@ import zhujiang.device.async.{DeviceIcnAsyncBundle, DeviceSideAsyncModule}
 import zhujiang.device.bridge.axilite.AxiLiteBridge
 import zhujiang.device.dma.Axi2Chi
 import zhujiang.{ZJModule, ZJRawModule}
-import zhujiang.device.cluster.interconnect.DftWires
+import zhujiang.DftWires
 
 class ShiftSync[T <: Data](gen:T, sync:Int = 3) extends Module {
   val io = IO(new Bundle{
