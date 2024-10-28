@@ -65,6 +65,7 @@ task("emu", function()
       {'r', "rebuild", "k", nil, "forcely rebuild"},
       {'s', "sparse_mem", "k", nil, "use sparse mem"},
       {'d', "dramsim3", "k", nil, "use dramsim3"},
+      {'p', "no_perf", "k", nil, "disable perf counter"},
       {'h', "dramsim3_home", "kv", path.join(os.curdir(), "dependencies", "dramsim"), "dramsim3 home dir"},
       {'t', "threads", "kv", "16", "simulation threads"},
       {'j', "jobs", "kv", "16", "compilation jobs"},
