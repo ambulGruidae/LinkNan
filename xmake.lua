@@ -62,7 +62,7 @@ task("emu", function()
     usage = "xmake emu [options]",
     description = "Compile with verilator",
     options = {
-      {'r', "rebuild", "k", nil, "forcely rebuild"},
+      {'b', "rebuild", "k", nil, "forcely rebuild"},
       {'s', "sparse_mem", "k", nil, "use sparse mem"},
       {'d', "dramsim3", "k", nil, "use dramsim3"},
       {'p', "no_perf", "k", nil, "disable perf counter"},
@@ -104,7 +104,7 @@ task("simv", function()
     usage = "xmake simv [options]",
     description = "Compile with vcs",
     options = {
-      {'r', "rebuild", "k", nil, "forcely rebuild"},
+      {'b', "rebuild", "k", nil, "forcely rebuild"},
       {'d', "no_fsdb", "k", nil, "do not dump wave"},
       {'s', "sparse_mem", "k", nil, "use sparse mem"},
       {'r', "ref", "kv", "Spike", "reference model"},
