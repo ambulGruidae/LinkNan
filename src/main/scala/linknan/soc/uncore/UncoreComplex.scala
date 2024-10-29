@@ -4,6 +4,7 @@ import chisel3._
 import chisel3.util.Cat
 import zhujiang.axi._
 import freechips.rocketchip.diplomacy._
+import linknan.soc.PeripheralRemapper
 import org.chipsalliance.cde.config.Parameters
 import xijiang.{Node, NodeType}
 import xs.utils.ResetGen
@@ -111,6 +112,8 @@ class UncoreComplex(cfgNode: Node, dmaNode: Node)(implicit p: Parameters) extend
   dmaXBar.io.upstream.last <> dmaBuf.io.out
   dmaBuf.io.in <> io.ext.dma
   dmaBridge.axi <> dmaXBar.io.downstream.head
+  dmaBridge.axi.aw.bits.addr := PeripheralRemapper(dmaXBar.io.downstream.head.aw.bits.addr, p)
+  dmaBridge.axi.ar.bits.addr := PeripheralRemapper(dmaXBar.io.downstream.head.ar.bits.addr, p)
   dmaAsyncModule.io.icn <> dmaBridge.icn
   io.async.dma <> dmaAsyncModule.io.async
 

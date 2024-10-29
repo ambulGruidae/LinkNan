@@ -11,6 +11,14 @@ import zhujiang.chi._
 import zhujiang.device.async.{DeviceIcnAsyncBundle, DeviceSideAsyncModule, IcnAsyncBundle}
 import zhujiang.{DftWires, ZJBundle, ZJModule}
 
+class ClusterAddrBundle(implicit p:Parameters) extends ZJBundle {
+  val mmio = Bool()
+  val chip = UInt(nodeAidBits.W)
+  val tag = UInt((raw - 1 - clusterIdBits - zjParams.cpuSpaceBits).W)
+  val cpu = UInt((clusterIdBits - nodeAidBits).W)
+  val dev = UInt(zjParams.cpuSpaceBits.W)
+}
+
 class ClusterMiscWires(node: Node)(implicit p: Parameters) extends ZJBundle {
   val msip = Input(Vec(node.cpuNum, Bool()))
   val mtip = Input(Vec(node.cpuNum, Bool()))

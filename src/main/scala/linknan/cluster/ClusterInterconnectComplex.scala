@@ -8,8 +8,9 @@ import zhujiang.ZJModule
 import zhujiang.device.bridge.tlul.TLULBridge
 import linknan.cluster.interconnect._
 import linknan.cluster.peripheral.{ClusterPLL, CpuCtrl}
+import linknan.soc.PeripheralRemapper
 import zhujiang.device.tlu2chi.TLUL2ChiBridge
-import zhujiang.tilelink.{TLULBundle, TilelinkParams}
+import zhujiang.tilelink.{TLUBuffer, TLULBundle, TilelinkParams}
 import zhujiang.DftWires
 
 class ClusterInterconnectComplex(node: Node, cioParams: TilelinkParams)(implicit p: Parameters) extends ZJModule {
@@ -56,7 +57,10 @@ class ClusterInterconnectComplex(node: Node, cioParams: TilelinkParams)(implicit
   pllCtrl.io.lock := io.pllLock
 
   for(i <- 0 until node.cpuNum) {
-    cioXbar.io.upstream(i) <> io.cio(i)
+    val cio = TLUBuffer(io.cio(i), name = Some(s"cio_buf_$i"))
+    val rmp = PeripheralRemapper(cio.a.bits.address, p)
+    cioXbar.io.upstream(i) <> cio
+    cioXbar.io.upstream(i).a.bits.address := rmp
     cpuCtrlSeq(i).tls <> privatePeriPortSeq(i).head
     cpuCtrlSeq(i).io.defaultBootAddr := clusterHub.io.cpu.resetVector(i)
     cpuCtrlSeq(i).io.defaultEnable := clusterHub.io.cpu.resetEnable(i)
