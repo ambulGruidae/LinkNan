@@ -103,7 +103,7 @@ class UncoreComplex(cfgNode: Node, dmaNode: Node)(implicit p: Parameters) extend
   cfgXBar.misc.chip := io.chip
   cfgAsyncModule.io.async <> io.async.cfg
   cfgBridge.icn <> cfgAsyncModule.io.icn
-  cfgXBar.io.upstream.head <> cfgBridge.axi
+  cfgXBar.io.upstream.head <> AxiBuffer(cfgBridge.axi, name = Some("cfgBridgeBuffer"))
   axi2tl.io.axi <> cfgXBar.io.downstream.head
   cfgBuf.io.in <> cfgXBar.io.downstream.last
   io.ext.cfg <> cfgBuf.io.out
@@ -111,9 +111,10 @@ class UncoreComplex(cfgNode: Node, dmaNode: Node)(implicit p: Parameters) extend
   dmaXBar.io.upstream.head <> tl2axi.io.axi
   dmaXBar.io.upstream.last <> dmaBuf.io.out
   dmaBuf.io.in <> io.ext.dma
-  dmaBridge.axi <> dmaXBar.io.downstream.head
-  dmaBridge.axi.aw.bits.addr := PeripheralRemapper(dmaXBar.io.downstream.head.aw.bits.addr, p)
-  dmaBridge.axi.ar.bits.addr := PeripheralRemapper(dmaXBar.io.downstream.head.ar.bits.addr, p)
+  private val dmaAxi = AxiBuffer(dmaXBar.io.downstream.head, name = Some("dmaBridgeBuffer"))
+  dmaBridge.axi <> dmaAxi
+  dmaBridge.axi.aw.bits.addr := PeripheralRemapper(dmaAxi.aw.bits.addr, p)
+  dmaBridge.axi.ar.bits.addr := PeripheralRemapper(dmaAxi.ar.bits.addr, p)
   dmaAsyncModule.io.icn <> dmaBridge.icn
   io.async.dma <> dmaAsyncModule.io.async
 
