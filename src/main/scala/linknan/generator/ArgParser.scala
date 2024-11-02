@@ -5,11 +5,17 @@ import xs.utils.perf.DebugOptionsKey
 import zhujiang.ZJParametersKey
 
 object ArgParser {
-  def apply(args: Array[String]): (Parameters, Array[String]) = {
+  def configParse(sim:Boolean)(args: Array[String]) :(Parameters, Array[String]) = {
     val configParam = args.filter(_ == "--config")
-    val (configuration, stripCfgArgs) = if(configParam.isEmpty) {
-      println("Config is not assigned, use Full Configuration!")
-      (new FullConfig, args)
+    if(configParam.isEmpty) {
+      val defaultCfg = if(sim) {
+        println("Config is not assigned, use Minimal Configuration!")
+        new MinimalConfig
+      } else {
+        println("Config is not assigned, use Full Configuration!")
+        new FullConfig
+      }
+      (defaultCfg, args)
     } else {
       val pos = args.indexOf(configParam.head)
       val cfgStr = args(pos + 1)
@@ -17,22 +23,21 @@ object ArgParser {
         case "reduced" => new ReducedConfig
         case "minimal" => new MinimalConfig
         case "spec" => new SpecConfig
+        case "fpga" => new FpgaConfig
         case _ => new FullConfig
       }
       val newArgs = args.zipWithIndex.filterNot(e => e._2 == pos || e._2 == (pos + 1)).map(_._1)
       (res, newArgs)
     }
+  }
+
+  def apply(args: Array[String]): (Parameters, Array[String]) = {
+    val (configuration, stripCfgArgs) = configParse(sim = false)(args)
 
     var firrtlOpts = Array[String]()
-    var hasHelp: Boolean = false
-
     def parse(config: Parameters, args: List[String]): Parameters = {
       args match {
         case Nil => config
-
-        case "--help" :: tail =>
-          hasHelp = true
-          parse(config, tail)
 
         case "--fpga-platform" :: tail =>
           parse(config.alter((site, here, up) => {
@@ -71,7 +76,6 @@ object ArgParser {
     }
 
     val cfg = parse(configuration, stripCfgArgs.toList)
-    if(hasHelp) firrtlOpts :+= "--help"
     (cfg, firrtlOpts)
   }
 }

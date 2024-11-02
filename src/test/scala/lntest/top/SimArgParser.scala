@@ -1,5 +1,6 @@
 package lntest.top
 
+import linknan.generator.ArgParser.configParse
 import linknan.generator._
 import org.chipsalliance.cde.config.Parameters
 import xs.utils.perf.DebugOptionsKey
@@ -7,23 +8,7 @@ import zhujiang.ZJParametersKey
 
 object SimArgParser {
   def apply(args: Array[String]): (Parameters, Array[String]) = {
-    val configParam = args.filter(_ == "--config")
-    val (configuration, stripCfgArgs) = if(configParam.isEmpty) {
-      println("Config is not assigned, use Minimal Configuration!")
-      (new MinimalConfig, args)
-    } else {
-      val pos = args.indexOf(configParam.head)
-      val cfgStr = args(pos + 1)
-      val res = cfgStr match {
-        case "reduced" => new ReducedConfig
-        case "full" => new FullConfig
-        case "spec" => new SpecConfig
-        case _ => new MinimalConfig
-      }
-      val newArgs = args.zipWithIndex.filterNot(e => e._2 == pos || e._2 == (pos + 1)).map(_._1)
-      (res, newArgs)
-    }
-
+    val (configuration, stripCfgArgs) = configParse(sim = true)(args)
 
     var firrtlOpts = Array[String]()
 

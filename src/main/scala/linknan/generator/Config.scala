@@ -139,3 +139,7 @@ class MinimalConfig extends Config(
 class SpecConfig extends Config(
   new L1DConfig ++ new L2Config ++ new LLCConfig ++ new MinimalNocConfig
 )
+
+class FpgaConfig extends Config(
+  new L1DConfig ++ new L2Config(512, 8) ++ new LLCConfig(8, 8) ++ new FullNocConfig
+)
