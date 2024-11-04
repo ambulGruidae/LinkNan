@@ -134,6 +134,7 @@ class ClusterSharedUnit(cioEdge: TLEdgeIn, l2EdgeIn: TLEdgeIn, node:Node)(implic
       core.meip := hub.io.cpu.meip(i)
       core.seip := hub.io.cpu.seip(i)
       core.dbip := hub.io.cpu.dbip(i)
+      core.imsic <> hub.io.imisc(i)
       hub.io.cpu.resetState(i) := core.reset_state
       core.dft := hub.io.dft
     }

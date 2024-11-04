@@ -8,7 +8,7 @@ import chisel3.experimental.hierarchy.{Definition, Instance, instantiable, publi
 import darecreek.exu.vfu.{VFuParameters, VFuParamsKey}
 import freechips.rocketchip.diplomacy.{LazyModule, MonitorsEnabled}
 import freechips.rocketchip.tilelink.{TLBundle, TLBundleParameters}
-import linknan.generator.RemoveCoreKey
+import linknan.generator.TestIoOptionsKey
 import org.chipsalliance.cde.config.Parameters
 import xiangshan.XSCoreParamsKey
 import xijiang.Node
@@ -22,6 +22,7 @@ class CoreBlockTestIO(params:CoreBlockTestIOParams)(implicit p:Parameters) exten
   val reset = Output(AsyncReset())
   val cio = Flipped(new TLBundle(params.ioParams))
   val l2 = Flipped(new TLBundle(params.l2Params))
+  val imsic = if(p(TestIoOptionsKey).keepImsic) Some(new ImsicBundle) else None
   val mhartid = Output(UInt(p(ZJParametersKey).clusterIdBits.W))
 }
 
@@ -29,7 +30,7 @@ case class CoreBlockTestIOParams(ioParams:TLBundleParameters, l2Params: TLBundle
 
 @instantiable
 class CpuCluster(node:Node)(implicit p:Parameters) extends ZJRawModule {
-  private val removeCore = p(RemoveCoreKey)
+  private val removeCore = p(TestIoOptionsKey).removeCore
   private val dcacheParams = p(XSCoreParamsKey).dcacheParametersOpt.get
   private val l2Params = p(L2ParamKey)
 
@@ -84,6 +85,7 @@ class CpuCluster(node:Node)(implicit p:Parameters) extends ZJRawModule {
       core.get(i).reset := _csu.io.core(i).reset
       core.get(i).clock <> _csu.io.core(i).clock
       core.get(i).mhartid <> _csu.io.core(i).mhartid
+      core.get(i).imsic.foreach(_ <> _csu.io.core(i).imsic)
       _csu.io.core(i).halt := false.B
       _csu.io.core(i).icacheErr := DontCare
       _csu.io.core(i).dcacheErr := DontCare

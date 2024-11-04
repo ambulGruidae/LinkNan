@@ -30,6 +30,7 @@ class CoreWrapperIO(ioParams:TLBundleParameters, l2Params: TLBundleParameters)(i
   val meip = Input(Bool())
   val seip = Input(Bool())
   val dbip = Input(Bool())
+  val imsic = Flipped(new ImsicBundle)
   val reset_state = Output(Bool())
   val dft = Input(new DftWires)
 }
@@ -95,6 +96,7 @@ class CoreWrapper(implicit p:Parameters) extends LazyModule with BindingScope wi
     private val l2Params = l2Node.in.head._2.bundle
     @public val io = IO(new CoreWrapperIO(ioParams, l2Params))
     dontTouch(io)
+    io.imsic.fromCpu := DontCare
     childClock := io.clock
     childReset := withClockAndReset(io.clock, io.reset){ ResetGen(dft = Some(io.dft.reset)) }
     io.cio <> cioNode.in.head._1

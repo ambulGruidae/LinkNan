@@ -1,23 +1,29 @@
 package linknan.generator
 
 import SimpleL2.Configs.{L2Param, L2ParamKey}
+import linknan.soc.{LinkNanParams, LinkNanParamsKey}
 import org.chipsalliance.cde.config.{Config, _}
 import xiangshan.cache.DCacheParameters
 import xiangshan.{XSCoreParameters, XSCoreParamsKey}
-import xijiang.tfb.TrafficBoardParams
 import xijiang.{NodeParam, NodeType}
 import xs.utils.perf.{DebugOptions, DebugOptionsKey}
 import zhujiang.{ZJParameters, ZJParametersKey}
 
 case object PrefixKey extends Field[String]
-case object RemoveCoreKey extends Field[Boolean]
+case object TestIoOptionsKey extends Field[TestIoOptions]
+
+case class TestIoOptions(
+  removeCore: Boolean = false,
+  keepImsic:Boolean = true
+)
 
 class FullNocConfig extends Config((site, here, up) => {
   case DebugOptionsKey => DebugOptions()
   case XSCoreParamsKey => XSCoreParameters()
   case L2ParamKey => L2Param(useDiplomacy = true)
   case PrefixKey => ""
-  case RemoveCoreKey => false
+  case TestIoOptionsKey => TestIoOptions()
+  case LinkNanParamsKey => LinkNanParams()
   case ZJParametersKey => ZJParameters(
     localNodeParams = Seq(
       NodeParam(nodeType = NodeType.S, bankId = 0, splitFlit = true, dpId = 0),
@@ -50,7 +56,8 @@ class ReducedNocConfig extends Config((site, here, up) => {
   case XSCoreParamsKey => XSCoreParameters()
   case L2ParamKey => L2Param(useDiplomacy = true)
   case PrefixKey => ""
-  case RemoveCoreKey => false
+  case TestIoOptionsKey => TestIoOptions()
+  case LinkNanParamsKey => LinkNanParams()
   case ZJParametersKey => ZJParameters(
     localNodeParams = Seq(
       NodeParam(nodeType = NodeType.S, bankId = 0, splitFlit = true),
@@ -71,7 +78,8 @@ class MinimalNocConfig extends Config((site, here, up) => {
   case XSCoreParamsKey => XSCoreParameters()
   case L2ParamKey => L2Param(useDiplomacy = true)
   case PrefixKey => ""
-  case RemoveCoreKey => false
+  case TestIoOptionsKey => TestIoOptions()
+  case LinkNanParamsKey => LinkNanParams()
   case ZJParametersKey => ZJParameters(
     localNodeParams = Seq(
       NodeParam(nodeType = NodeType.S, bankId = 0, splitFlit = true),

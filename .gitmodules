@@ -31,3 +31,7 @@
 	path = dependencies/xs-utils
 	url = https://github.com/OpenXiangShan-Nanhu/xs-utils
 	branch = main
+[submodule "dependencies/aia"]
+	path = dependencies/aia
+	url = https://github.com/OpenXiangShan-Nanhu/ChiselAIA
+	branch = main
