@@ -85,7 +85,11 @@ class CpuCluster(node:Node)(implicit p:Parameters) extends ZJRawModule {
       core.get(i).reset := _csu.io.core(i).reset
       core.get(i).clock <> _csu.io.core(i).clock
       core.get(i).mhartid <> _csu.io.core(i).mhartid
-      core.get(i).imsic.foreach(_ <> _csu.io.core(i).imsic)
+      if(core.get(i).imsic.isDefined) {
+        core.get(i).imsic.get <> _csu.io.core(i).imsic
+      } else {
+        _csu.io.core(i).imsic.fromCpu := DontCare
+      }
       _csu.io.core(i).halt := false.B
       _csu.io.core(i).icacheErr := DontCare
       _csu.io.core(i).dcacheErr := DontCare
