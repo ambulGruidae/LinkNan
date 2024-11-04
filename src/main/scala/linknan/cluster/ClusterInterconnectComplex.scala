@@ -15,25 +15,16 @@ import zhujiang.DftWires
 
 class ClusterInterconnectComplex(node: Node, cioParams: TilelinkParams)(implicit p: Parameters) extends ZJModule {
   require(node.nodeType == NodeType.CC)
-  private val sharePeriNum = 1
-  private val privatePeriNum = 1
+
   private val clusterHub = Module(new ClusterHub(node))
   private val chi2tl = Module(new TLULBridge(clusterHub.io.peripheral.node, 64, 3))
   private val cioXbar = Module(new CioXBar(Seq.fill(node.cpuNum)(cioParams)))
-  private val periXbar = Module(new PeriXBar(Seq(chi2tl.tl.params, cioXbar.io.downstream.head.params), sharePeriNum, node.cpuNum, privatePeriNum))
   private val tl2chi = Module(new TLUL2ChiBridge(clusterHub.io.cio.node, cioXbar.io.downstream.last.params))
-  private val periParams = periXbar.io.downstream.head.params
-  private val cpuCtrlSeq = Seq.fill(node.cpuNum)(Module(new CpuCtrl(periParams)))
-  private val pllCtrl = Module(new ClusterPLL(periParams))
-
-  private val sharePeriPortSeq = periXbar.io.downstream.take(sharePeriNum)
-  private val privatePeriPortSeq = for(i <- 0 until node.cpuNum) yield {
-    periXbar.io.downstream.drop(sharePeriNum).slice(i * privatePeriNum, i * privatePeriNum + 1)
-  }
+  private val clusterPeriCx = Module(new ClusterPeripheralComplex(Seq(chi2tl.tl.params, cioXbar.io.downstream.head.params), node.cpuNum))
 
   chi2tl.icn <> clusterHub.io.peripheral
-  periXbar.io.upstream.head <> chi2tl.tl
-  periXbar.io.upstream.last <> cioXbar.io.downstream.head
+  clusterPeriCx.io.tls.head <> chi2tl.tl
+  clusterPeriCx.io.tls.last <> cioXbar.io.downstream.head
   tl2chi.tlm <> cioXbar.io.downstream.last
   clusterHub.io.cio <> tl2chi.icn
 
@@ -42,6 +33,7 @@ class ClusterInterconnectComplex(node: Node, cioParams: TilelinkParams)(implicit
     val l2cache = new IcnBundle(clusterHub.io.l2cache.node)
     val cio = Vec(node.cpuNum, Flipped(new TLULBundle(cioParams)))
     val cpu = Flipped(new ClusterMiscWires(node))
+    val imisc = Vec(node.cpuNum, new ImsicBundle)
     val dft = Output(new DftWires)
     val pllCfg = Output(Vec(8, UInt(32.W)))
     val pllLock = Input(Bool())
@@ -52,21 +44,20 @@ class ClusterInterconnectComplex(node: Node, cioParams: TilelinkParams)(implicit
   io.cpu <> clusterHub.io.cpu
   io.dft := clusterHub.io.dft
   cioXbar.misc.chip := clusterHub.io.cpu.mhartid(0)(clusterIdBits - 1, nodeAidBits)
-  pllCtrl.tls <> sharePeriPortSeq.head
-  io.pllCfg := pllCtrl.io.cfg
-  pllCtrl.io.lock := io.pllLock
+  io.pllCfg := clusterPeriCx.io.pllCfg
+  clusterPeriCx.io.pllLock := io.pllLock
 
   for(i <- 0 until node.cpuNum) {
     val cio = TLUBuffer(io.cio(i), name = Some(s"cio_buf_$i"))
     val rmp = PeripheralRemapper(cio.a.bits.address, p)
     cioXbar.io.upstream(i) <> cio
     cioXbar.io.upstream(i).a.bits.address := rmp
-    cpuCtrlSeq(i).tls <> privatePeriPortSeq(i).head
-    cpuCtrlSeq(i).io.defaultBootAddr := clusterHub.io.cpu.resetVector(i)
-    cpuCtrlSeq(i).io.defaultEnable := clusterHub.io.cpu.resetEnable(i)
-    io.cpu.resetVector(i) := cpuCtrlSeq(i).io.cpuBootAddr
-    io.cpu.resetEnable(i) := cpuCtrlSeq(i).io.cpuReset
+    clusterPeriCx.io.cpu(i).defaultBootAddr := clusterHub.io.cpu.resetVector(i)
+    clusterPeriCx.io.cpu(i).defaultEnable := clusterHub.io.cpu.resetEnable(i)
+    io.cpu.resetVector(i) := clusterPeriCx.io.cpu(i).bootAddr
+    io.cpu.resetEnable(i) := clusterPeriCx.io.cpu(i).stop
     cioXbar.misc.core(i) := clusterHub.io.cpu.mhartid(i)
-    periXbar.misc.core(i) := clusterHub.io.cpu.mhartid(i)
+    clusterPeriCx.io.cpu(i).coreId := clusterHub.io.cpu.mhartid(i)(clusterIdBits - nodeAidBits - 1, 0)
+    io.imisc(i) <> clusterPeriCx.io.cpu(i).imsic
   }
 }

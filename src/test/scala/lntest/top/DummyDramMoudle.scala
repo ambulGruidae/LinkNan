@@ -3,7 +3,7 @@ package lntest.top
 import chisel3.Module
 import freechips.rocketchip.amba.axi4.{AXI4MasterNode, AXI4MasterParameters, AXI4MasterPortParameters, AXI4SlaveNode, AXI4SlaveParameters, AXI4SlavePortParameters}
 import freechips.rocketchip.diplomacy.{AddressSet, IdRange, LazyModule, LazyModuleImp, MemoryDevice, RegionType, TransferSizes}
-import linknan.generator.RemoveCoreKey
+import linknan.generator.TestIoOptionsKey
 import lntest.peripheral.AXI4MemorySlave
 import org.chipsalliance.cde.config.Parameters
 import xs.utils.perf.DebugOptionsKey
@@ -51,7 +51,7 @@ class DummyDramMoudle(memParams: AxiParams)(implicit p: Parameters) extends Lazy
       16L * 1024 * 1024 * 1024,
       useBlackBox = true,
       dynamicLatency = p(DebugOptionsKey).UseDRAMSim,
-      pureDram = p(RemoveCoreKey)
+      pureDram = p(TestIoOptionsKey).removeCore
     )
 
     private val simAXIMem = Module(l_simAXIMem.module)

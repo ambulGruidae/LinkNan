@@ -43,7 +43,7 @@ object SimArgParser {
 
         case "--no-cores" :: tail =>
           parse(config.alter((site, here, up) => {
-            case RemoveCoreKey => true
+            case TestIoOptionsKey => up(TestIoOptionsKey).copy(removeCore = true, keepImsic = false)
             case DebugOptionsKey => up(DebugOptionsKey).copy(EnableDebug = true) // For ZhuJiang DontTouch IO
           }), tail)
 

@@ -61,7 +61,7 @@ object ArgParser {
 
         case "--no-cores" :: tail =>
           parse(config.alter((site, here, up) => {
-            case RemoveCoreKey => true
+            case TestIoOptionsKey => up(TestIoOptionsKey).copy(removeCore = true)
           }), tail)
 
         case "--prefix" :: confString :: tail =>
