@@ -155,8 +155,10 @@ function emu_run()
   local image_basename = path.basename(image_file)
   local sim_dir = path.join("sim", "emu", image_basename)
   local ref_so = path.join(abs_ref_base_dir, option.get("ref"))
-  if os.exists(sim_dir) then os.rm(path.join(sim_dir, "*")) else os.mkdir(sim_dir) end
-  os.ln(path.join(abs_dir, "sim", "emu", "comp", "emu"), path.join(sim_dir, "emu"))
+  local sim_emu = path.join(sim_dir, "emu")
+  if not os.exists(sim_dir) then os.mkdir(sim_dir) end
+  if os.exists(sim_emu) then os.rm(sim_emu) end
+  os.ln(path.join(abs_dir, "sim", "emu", "comp", "emu"), sim_emu)
   os.cd(sim_dir)
   local sh_str = "chmod +x emu" .. " && ( ./emu"
   if not option.get("dump") then

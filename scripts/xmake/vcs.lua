@@ -144,9 +144,13 @@ function simv_run()
   local image_basename = path.basename(image_file)
   local sim_dir = path.join("sim", "simv", image_basename)
   local ref_so = path.join(abs_ref_base_dir, option.get("ref"))
-  if os.exists(sim_dir) then os.rm(path.join(sim_dir, "*")) else os.mkdir(sim_dir) end
-  os.ln(path.join(abs_dir, "sim", "simv", "comp", "simv"), path.join(sim_dir, "simv"))
-  os.ln(path.join(abs_dir, "sim", "simv", "comp", "simv.daidir"), path.join(sim_dir, "simv.daidir"))
+  local simv = path.join(sim_dir, "simv")
+  local daidir = path.join(sim_dir, "simv.daidir")
+  if not os.exists(sim_dir) then os.mkdir(sim_dir) end
+  if os.exists(simv) then os.rm(simv) end
+  if os.exists(daidir) then os.rm(daidir) end
+  os.ln(path.join(abs_dir, "sim", "simv", "comp", "simv"), simv)
+  os.ln(path.join(abs_dir, "sim", "simv", "comp", "simv.daidir"), daidir)
   os.cd(sim_dir)
   local sh_str = "chmod +x simv" .. " && ( ./simv"
   if not option.get("no_dump") then
