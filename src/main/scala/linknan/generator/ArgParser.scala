@@ -24,6 +24,7 @@ object ArgParser {
         case "minimal" => new MinimalConfig
         case "spec" => new SpecConfig
         case "fpga" => new FpgaConfig
+        case "btest" => new BtestConfig
         case _ => new FullConfig
       }
       val newArgs = args.zipWithIndex.filterNot(e => e._2 == pos || e._2 == (pos + 1)).map(_._1)

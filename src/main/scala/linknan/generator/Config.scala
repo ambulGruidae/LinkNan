@@ -151,3 +151,7 @@ class SpecConfig extends Config(
 class FpgaConfig extends Config(
   new L1DConfig ++ new L2Config(512, 8) ++ new LLCConfig(8, 8) ++ new FullNocConfig
 )
+
+class BtestConfig extends Config(
+  new L1DConfig ++ new L2Config(256, 8) ++ new LLCConfig(1, 8) ++ new ReducedNocConfig
+)
