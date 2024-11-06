@@ -182,9 +182,9 @@ end)
 
 task("clean", function()
   on_run(function()
+    os.rm(path.join("out", "*.dep"))
     os.rmdir(path.join("build", "*"))
     os.rmdir(path.join("sim", "*"))
-    os.rm(path.join("out", "*.dep"))
   end)
   set_menu {}
 end)
