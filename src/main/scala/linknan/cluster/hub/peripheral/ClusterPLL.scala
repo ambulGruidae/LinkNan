@@ -1,4 +1,4 @@
-package linknan.cluster.peripheral
+package linknan.cluster.hub.peripheral
 
 import xs.utils.ClockManagerWrapper
 import chisel3._

@@ -1,4 +1,4 @@
-package linknan.cluster.peripheral
+package linknan.cluster.hub.peripheral
 
 import chisel3._
 import chisel3.util._

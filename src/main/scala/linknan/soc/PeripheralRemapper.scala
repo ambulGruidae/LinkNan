@@ -1,7 +1,7 @@
 package linknan.soc
 import chisel3._
 import chisel3.util._
-import linknan.cluster.interconnect.ClusterAddrBundle
+import linknan.cluster.hub.interconnect.ClusterAddrBundle
 import org.chipsalliance.cde.config.Parameters
 import xijiang.NodeType
 import zhujiang.{ZJBundle, ZJModule}

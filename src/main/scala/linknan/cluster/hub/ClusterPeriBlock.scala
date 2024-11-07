@@ -1,11 +1,12 @@
-package linknan.cluster
+package linknan.cluster.hub
+
 import aia.{CSRToIMSICBundle, IMSICParams, IMSICToCSRBundle, TLIMSIC}
 import chisel3._
 import chisel3.util._
 import freechips.rocketchip.diplomacy.{IdRange, LazyModule, LazyModuleImp}
 import freechips.rocketchip.tilelink.{TLBuffer, TLClientNode, TLMasterParameters, TLMasterPortParameters}
-import linknan.cluster.interconnect.{ClusterPeriParams, PeriXBar}
-import linknan.cluster.peripheral._
+import linknan.cluster.hub.interconnect.{ClusterPeriParams, PeriXBar}
+import linknan.cluster.hub.peripheral.{ClusterPLL, CpuCtrl}
 import linknan.soc.LinkNanParamsKey
 import org.chipsalliance.cde.config.Parameters
 import zhujiang.ZJBundle
@@ -62,7 +63,7 @@ class ClusterPeriCtlBundle(implicit p:Parameters) extends ZJBundle {
   val coreId = Input(UInt((clusterIdBits - nodeAidBits).W))
 }
 
-class ClusterPeripheralComplex(tlParams: Seq[TilelinkParams], coreNum:Int)(implicit p:Parameters) extends Module {
+class ClusterPeriBlock(tlParams: Seq[TilelinkParams], coreNum:Int)(implicit p:Parameters) extends Module {
   private val privateSeq = Seq.tabulate(coreNum)(i => Seq(
     ClusterPeriParams(s"imisc_$i", Seq((0x0000, 0x8000), (0x8000, 0x9000)), Some(i)),
     ClusterPeriParams(s"cpu_ctl_$i", Seq((0x9000, 0xA000)), Some(i))
