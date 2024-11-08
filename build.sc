@@ -4,10 +4,10 @@ import scalafmt._
 import $file.dependencies.`rocket-chip`.common
 
 val defaultVersions = Map(
-  "chisel" -> "6.1.0",
-  "chisel-plugin" -> "6.1.0",
-  "chiseltest" -> "5.0.0",
-  "scala" -> "2.13.10",
+  "chisel" -> "6.5.0",
+  "chisel-plugin" -> "6.5.0",
+  "chiseltest" -> "6.0.0",
+  "scala" -> "2.13.14",
   "scalatest" -> "3.2.7"
 )
 
