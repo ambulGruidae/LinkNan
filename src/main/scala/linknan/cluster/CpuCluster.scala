@@ -47,43 +47,28 @@ class CpuCluster(node:Node)(implicit p:Parameters) extends ZJRawModule {
   private val cioEdge = coreGen.cioNode.edges.in.head
   private val cl2Edge = coreGen.l2Node.edges.in.head
 
-  private val hubNode = if(p(TestIoOptionsKey).keepImsic) node.copy(splitFlit = false) else node
-  private val hub = Module(new AlwaysOnDomain(hubNode, cioEdge.bundle))
+
+  private val hub = Module(new AlwaysOnDomain(node, cioEdge.bundle))
   private val csu = if(p(TestIoOptionsKey).removeCsu) None else Some(Module(new ClusterSharedUnit(cioEdge, cl2Edge, hub.io.cluster.node)))
 
-  @public val coreIoParams = BlockTestIOParams(cioEdge.bundle, cl2Edge.bundle, hub.io.cluster.node)
+  private val btNode = if(p(TestIoOptionsKey).keepImsic) hub.io.cluster.l2cache.node.copy(splitFlit = false) else hub.io.cluster.l2cache.node
+  @public val coreIoParams = BlockTestIOParams(cioEdge.bundle, cl2Edge.bundle, btNode)
   @public val icn = IO(new ClusterDeviceBundle(node))
   @public val core = if(removeCore) Some(IO(Vec(node.cpuNum, new BlockTestIO(coreIoParams)))) else None
 
-  hub.io.icn.misc <> icn.misc
-  hub.io.icn.osc_clock := icn.osc_clock
-  hub.io.icn.dft := icn.dft
-  hub.io.icn.ccn.reset := icn.ccn.reset
-  hub.io.icn.ccn.async.foreach(_ <> icn.ccn.async.get)
-  if(hub.io.icn.ccn.sync.isDefined) {
-    val hubIcn = hub.io.icn.ccn.sync.get
-    val nocIcn = icn.ccn.sync.get
-    def connChn[T <: Data](sink:Option[ReadyValidIO[T]], src:Option[ReadyValidIO[T]]):Unit = {
-      if(sink.isDefined) {
-        sink.get.valid := src.get.valid
-        src.get.ready := sink.get.ready
-        sink.get.bits := src.get.bits.asTypeOf(sink.get.bits)
-      }
-    }
-    connChn(hubIcn.rx.req, nocIcn.rx.req)
-    connChn(hubIcn.rx.resp, nocIcn.rx.resp)
-    connChn(hubIcn.rx.data, nocIcn.rx.data)
-    connChn(hubIcn.rx.snoop, nocIcn.rx.snoop)
-    connChn(nocIcn.tx.req, hubIcn.tx.req)
-    connChn(nocIcn.tx.resp, hubIcn.tx.resp)
-    connChn(nocIcn.tx.data, hubIcn.tx.data)
-    connChn(nocIcn.tx.snoop, hubIcn.tx.snoop)
-  }
-
+  icn <> hub.io.icn
   if(removeCsu) {
     hub.io.cluster := DontCare
   } else {
     hub.io.cluster <> csu.get.io.hub
+  }
+
+  private def connChn[T <: Data](sink:Option[ReadyValidIO[T]], src:Option[ReadyValidIO[T]]):Unit = {
+    if(sink.isDefined) {
+      sink.get.valid := src.get.valid
+      src.get.ready := sink.get.ready
+      sink.get.bits := src.get.bits.asTypeOf(sink.get.bits)
+    }
   }
 
   for(i <- 0 until node.cpuNum) {
@@ -93,7 +78,16 @@ class CpuCluster(node:Node)(implicit p:Parameters) extends ZJRawModule {
       connectByName(hub.io.cluster.cio(i).a, core.get(i).cio.a)
       connectByName(core.get(i).cio.d, hub.io.cluster.cio(i).d)
       core.get(i).mhartid := hub.io.cluster.cpu.mhartid(i)
-      hub.io.cluster.l2cache <> core.get(i).icn.get
+      val topIcn = core.get(i).icn.get
+      val hubIcn = hub.io.cluster.l2cache
+      connChn(topIcn.rx.req, hubIcn.tx.req)
+      connChn(topIcn.rx.resp, hubIcn.tx.resp)
+      connChn(topIcn.rx.data, hubIcn.tx.data)
+      connChn(topIcn.rx.snoop, hubIcn.tx.snoop)
+      connChn(hubIcn.rx.req, topIcn.tx.req)
+      connChn(hubIcn.rx.resp, topIcn.tx.resp)
+      connChn(hubIcn.rx.data, topIcn.tx.data)
+      connChn(hubIcn.rx.snoop, topIcn.tx.snoop)
       if(core.get(i).imsic.isDefined) {
         core.get(i).imsic.get <> hub.io.cluster.imsic(i)
       } else {
