@@ -6,7 +6,8 @@ task("soc" , function()
     description = "Generate soc rtl",
     options = {
       {'a', "all_in_one", "k", nil, "do not split generated rtl"},
-      {'b', "block_test_cache", "k", nil, "leave core interfaces to the top"},
+      {'b', "block_test_l2l3", "k", nil, "leave core interfaces to the top"},
+      {'B', "block_test_l3", "k", nil, "leave icn interfaces to the top"},
       {'c', "clean_difftest", "k", nil, "generate verilog without any difftest components"},
       {'d', "dramsim3", "k", nil, "use dramsim3 as simulation main memory"},
       {'e', "enable_perf", "k", nil, "generate verilog with perf debug components"},
@@ -28,7 +29,8 @@ task("soc" , function()
     if option.get("sim") then table.join2(chisel_opts, {"linknan.test.runMain"}) else table.join2(chisel_opts, {"linknan.runMain"}) end
     if option.get("sim") then table.join2(chisel_opts, {"lntest.top.SimGenerator"}) else table.join2(chisel_opts, {"linknan.generator.SocGenerator"}) end
     if not option.get("all_in_one") or option.get("release") then table.join2(chisel_opts, {"--split-verilog"}) end
-    if option.get("block_test_cache") then table.join2(chisel_opts, {"--no-cores"}) end
+    if option.get("block_test_l2l3") then table.join2(chisel_opts, {"--no-cores"}) end
+    if option.get("block_test_l3") then table.join2(chisel_opts, {"--no-csu"}) end
     if not option.get("clean_difftest") and option.get("pldm_verilog") then table.join2(chisel_opts, {"--basic-difftest"}) end
     if not option.get("clean_difftest") and not option.get("pldm_verilog") then table.join2(chisel_opts, {"--enable-difftest"}) end
     if not option.get("enable_perf") then table.join2(chisel_opts, {"--fpga-platform"}) end

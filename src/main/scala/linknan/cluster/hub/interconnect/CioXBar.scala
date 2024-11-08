@@ -1,4 +1,4 @@
-package linknan.cluster.interconnect
+package linknan.cluster.hub.interconnect
 
 import chisel3._
 import chisel3.util.Cat

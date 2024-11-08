@@ -14,8 +14,11 @@ case object TestIoOptionsKey extends Field[TestIoOptions]
 
 case class TestIoOptions(
   removeCore: Boolean = false,
-  keepImsic:Boolean = true
-)
+  removeCsu: Boolean = false,
+  keepImsic:Boolean = true,
+) {
+  val doBlockTest = removeCore || removeCsu
+}
 
 class FullNocConfig extends Config((site, here, up) => {
   case DebugOptionsKey => DebugOptions()

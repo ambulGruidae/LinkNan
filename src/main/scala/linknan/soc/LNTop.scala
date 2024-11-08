@@ -4,7 +4,8 @@ import chisel3._
 import chisel3.experimental.hierarchy.{Definition, Instance}
 import chisel3.experimental.{ChiselAnnotation, annotate}
 import chisel3.util._
-import linknan.cluster.{CoreBlockTestIO, CpuCluster}
+import freechips.rocketchip.diplomacy.MonitorsEnabled
+import linknan.cluster.{BlockTestIO, CpuCluster}
 import linknan.generator.{PrefixKey, TestIoOptionsKey}
 import linknan.soc.uncore.UncoreComplex
 import zhujiang.{DftWires, ZJParametersKey, ZJRawModule, Zhujiang}
@@ -62,10 +63,12 @@ class LNTop(implicit p:Parameters) extends ZJRawModule with ImplicitClock with I
   io.ndreset := uncore.io.debug.ndreset
 
   private val nanhuNode = noc.io.ccn.groupBy(_.node.attr)("nanhu").head.node
-  private val nanhuClusterDef = Definition(new CpuCluster(nanhuNode))
+  private val nanhuClusterDef = Definition(new CpuCluster(nanhuNode)(p.alterPartial({
+    case MonitorsEnabled => false
+  })))
   private val cpuNum = noc.io.ccn.map(_.node.cpuNum).sum
 
-  val core = if(p(TestIoOptionsKey).removeCore) Some(IO(Vec(cpuNum, new CoreBlockTestIO(nanhuClusterDef.coreIoParams)))) else None
+  val core = if(p(TestIoOptionsKey).doBlockTest) Some(IO(Vec(cpuNum, new BlockTestIO(nanhuClusterDef.coreIoParams)))) else None
 
   for((ccn, i) <- noc.io.ccn.zipWithIndex) {
     val clusterId = ccn.node.clusterId
@@ -86,13 +89,13 @@ class LNTop(implicit p:Parameters) extends ZJRawModule with ImplicitClock with I
       cc.icn.misc.dbip(i) := uncore.io.cpu.dbip(cid)
       cc.icn.misc.mhartid(i) := Cat(io.chip, cid.U((clusterIdBits - nodeAidBits).W))
       uncore.io.resetCtrl.hartIsInReset(cid) := cc.icn.misc.resetState(i)
-      cc.icn.misc.resetVector(i) := io.default_reset_vector
+      cc.icn.misc.defaultBootAddr(i) := io.default_reset_vector
       if(cid == 0) {
-        cc.icn.misc.resetEnable(i) := true.B
+        cc.icn.misc.defaultCpuEnable(i) := true.B
       } else {
-        cc.icn.misc.resetEnable(i) := false.B
+        cc.icn.misc.defaultCpuEnable(i) := false.B
       }
-      if(p(TestIoOptionsKey).removeCore) core.get(cid) <> cc.core.get(i)
+      if(p(TestIoOptionsKey).doBlockTest) core.get(cid) <> cc.core.get(i)
     }
   }
 }

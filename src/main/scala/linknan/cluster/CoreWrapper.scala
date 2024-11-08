@@ -7,6 +7,7 @@ import chisel3.experimental.hierarchy.{instantiable, public}
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.interrupts.{IntSourceNode, IntSourcePortSimple}
 import freechips.rocketchip.tilelink._
+import linknan.cluster.hub.ImsicBundle
 import org.chipsalliance.cde.config.Parameters
 import utils.IntBuffer
 import xiangshan.{BusErrorUnitInfo, HasXSParameter, XSCore}

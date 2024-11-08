@@ -1,4 +1,4 @@
-package linknan.cluster.interconnect
+package linknan.cluster.hub.interconnect
 
 import chisel3._
 import chisel3.util._
@@ -24,8 +24,8 @@ class ClusterMiscWires(node: Node)(implicit p: Parameters) extends ZJBundle {
   val meip = Input(Vec(node.cpuNum, Bool()))
   val seip = Input(Vec(node.cpuNum, Bool()))
   val dbip = Input(Vec(node.cpuNum, Bool()))
-  val resetVector = Input(Vec(node.cpuNum, UInt(raw.W)))
-  val resetEnable = Input(Vec(node.cpuNum, Bool()))
+  val defaultBootAddr = Input(Vec(node.cpuNum, UInt(raw.W)))
+  val defaultCpuEnable = Input(Vec(node.cpuNum, Bool()))
   val resetState = Output(Vec(node.cpuNum, Bool()))
   val mhartid = Input(Vec(node.cpuNum, UInt(clusterIdBits.W)))
   val halt = Output(Vec(node.cpuNum, Bool()))

@@ -27,7 +27,7 @@ import freechips.rocketchip.diplomacy.{DisableMonitors, LazyModule, MonitorsEnab
 import xs.utils.{FileRegisters, GTimer}
 import difftest._
 import circt.stage.ChiselStage
-import linknan.cluster.CoreBlockTestIOParams
+import linknan.cluster.{BlockTestIO, BlockTestIOParams}
 import linknan.generator.{Generator, PrefixKey, TestIoOptionsKey}
 import linknan.soc.LNTop
 import xiangshan.XSCoreParamsKey
@@ -40,17 +40,17 @@ import zhujiang.axi.AxiBundle
 class SimTop(implicit p: Parameters) extends Module {
   private val debugOpts = p(DebugOptionsKey)
 
-  private val removeCore = p(TestIoOptionsKey).removeCore
+  private val doBlockTest = p(TestIoOptionsKey).doBlockTest
   private val soc = Module(new LNTop)
-  private val l_simMMIO = if(removeCore) None else Some(LazyModule(new SimMMIO(soc.io.cfg.params, soc.io.dma.params)))
-  private val simMMIO = if(removeCore) None else Some(Module(l_simMMIO.get.module))
+  private val l_simMMIO = if(doBlockTest) None else Some(LazyModule(new SimMMIO(soc.io.cfg.params, soc.io.dma.params)))
+  private val simMMIO = if(doBlockTest) None else Some(Module(l_simMMIO.get.module))
 
   val io = IO(new Bundle(){
-    val logCtrl = if(removeCore) None else Some(new LogCtrlIO)
-    val perfInfo = if(removeCore) None else Some(new PerfInfoIO)
-    val uart = if(removeCore) None else Some(new UARTIO)
-    val dma = if(removeCore) Some(Flipped(new AxiBundle(soc.io.dma.params))) else None
-    val cfg = if(removeCore) Some(new AxiBundle(soc.io.cfg.params)) else None
+    val logCtrl = if(doBlockTest) None else Some(new LogCtrlIO)
+    val perfInfo = if(doBlockTest) None else Some(new PerfInfoIO)
+    val uart = if(doBlockTest) None else Some(new UARTIO)
+    val dma = if(doBlockTest) Some(Flipped(new AxiBundle(soc.io.dma.params))) else None
+    val cfg = if(doBlockTest) Some(new AxiBundle(soc.io.cfg.params)) else None
   })
 
   private def connByName(sink:ReadyValidIO[Bundle], src:ReadyValidIO[Bundle]):Unit = {
@@ -64,7 +64,7 @@ class SimTop(implicit p: Parameters) extends Module {
     }
   }
 
-  if(removeCore) {
+  if(doBlockTest) {
     io.dma.get <> soc.io.dma
     io.cfg.get <> soc.io.cfg
     soc.io.ext_intr := 0.U
@@ -112,7 +112,7 @@ class SimTop(implicit p: Parameters) extends Module {
   soc.io.default_reset_vector := 0x10000000L.U
   soc.io.chip := 0.U
 
-  if(removeCore) {
+  if(doBlockTest) {
     soc.io.jtag := DontCare
   } else {
     val success = Wire(Bool())
@@ -125,10 +125,16 @@ class SimTop(implicit p: Parameters) extends Module {
     simMMIO.get.io.uart <> io.uart.get
   }
 
-  if(removeCore) {
+  if(p(TestIoOptionsKey).removeCsu) {
+    for(i <- soc.core.get.indices) {
+      val ext = IO(new BlockTestIO(soc.core.get(i).params))
+      ext.suggestName(s"core_icn_$i")
+      ext <> soc.core.get(i)
+    }
+  } else if(p(TestIoOptionsKey).removeCore) {
     for(i <- soc.core.get.indices) {
       val noc = soc.core.get(i)
-      val hub = LazyModule(new SimCoreHub(CoreBlockTestIOParams(noc.cio.params, noc.l2.params))(p.alterPartial({
+      val hub = LazyModule(new SimCoreHub(noc.params)(p.alterPartial({
         case MonitorsEnabled => false
         case TLUserKey =>
           val dcacheParams = p(XSCoreParamsKey).dcacheParametersOpt.get
@@ -143,7 +149,7 @@ class SimTop(implicit p: Parameters) extends Module {
     }
   }
 
-  if (!debugOpts.FPGAPlatform && debugOpts.EnablePerfDebug && !removeCore) {
+  if (!debugOpts.FPGAPlatform && debugOpts.EnablePerfDebug && !doBlockTest) {
     val timer = Wire(UInt(64.W))
     val logEnable = Wire(Bool())
     val clean = Wire(Bool())
@@ -158,7 +164,7 @@ class SimTop(implicit p: Parameters) extends Module {
     dontTouch(dump)
   }
 
-  if(!removeCore) DifftestModule.finish("XiangShan")
+  if(!doBlockTest) DifftestModule.finish("XiangShan")
 }
 
 object SimGenerator extends App {
