@@ -9,26 +9,30 @@ import freechips.rocketchip.tilelink.{TLBundle, TLBundleParameters}
 import linknan.cluster.hub.{AlwaysOnDomain, ImsicBundle}
 import linknan.cluster.hub.interconnect.ClusterDeviceBundle
 import linknan.generator.TestIoOptionsKey
+import linknan.utils.connectByName
 import org.chipsalliance.cde.config.Parameters
 import xiangshan.XSCoreParamsKey
 import xijiang.Node
+import xijiang.router.base.DeviceIcnBundle
 import xs.utils.tl.{TLUserKey, TLUserParams}
 import zhujiang.{ZJParametersKey, ZJRawModule}
 
-class CoreBlockTestIO(params:CoreBlockTestIOParams)(implicit p:Parameters) extends Bundle {
+class BlockTestIO(val params:BlockTestIOParams)(implicit p:Parameters) extends Bundle {
   val clock = Output(Clock())
   val reset = Output(AsyncReset())
   val cio = Flipped(new TLBundle(params.ioParams))
-  val l2 = Flipped(new TLBundle(params.l2Params))
-  val imsic = if(p(TestIoOptionsKey).keepImsic) Some(new ImsicBundle) else None
   val mhartid = Output(UInt(p(ZJParametersKey).clusterIdBits.W))
+  val imsic = if(p(TestIoOptionsKey).keepImsic) Some(new ImsicBundle) else None
+  val l2 = if(p(TestIoOptionsKey).removeCsu) None else Some(Flipped(new TLBundle(params.l2Params)))
+  val icn = if(p(TestIoOptionsKey).removeCsu) Some(Flipped(new DeviceIcnBundle(params.node))) else None
 }
 
-case class CoreBlockTestIOParams(ioParams:TLBundleParameters, l2Params: TLBundleParameters) extends IsLookupable
+case class BlockTestIOParams(ioParams:TLBundleParameters, l2Params: TLBundleParameters, node:Node) extends IsLookupable
 
 @instantiable
 class CpuCluster(node:Node)(implicit p:Parameters) extends ZJRawModule {
-  private val removeCore = p(TestIoOptionsKey).removeCore
+  private val removeCsu = p(TestIoOptionsKey).removeCsu
+  private val removeCore = p(TestIoOptionsKey).removeCore || p(TestIoOptionsKey).removeCsu
   private val dcacheParams = p(XSCoreParamsKey).dcacheParametersOpt.get
 
   private val coreGen = LazyModule(new CoreWrapper()(p.alterPartial({
@@ -41,34 +45,48 @@ class CpuCluster(node:Node)(implicit p:Parameters) extends ZJRawModule {
   private val cioEdge = coreGen.cioNode.edges.in.head
   private val cl2Edge = coreGen.l2Node.edges.in.head
 
-  private val hub = Module(new AlwaysOnDomain(node, cioEdge.bundle))
-  private val csu = Module(new ClusterSharedUnit(cioEdge, cl2Edge, hub.io.cluster.node))
+  private val hubNode = if(p(TestIoOptionsKey).keepImsic) node.copy(splitFlit = false) else node
+  private val hub = Module(new AlwaysOnDomain(hubNode, cioEdge.bundle))
+  private val csu = if(p(TestIoOptionsKey).removeCsu) None else Some(Module(new ClusterSharedUnit(cioEdge, cl2Edge, hub.io.cluster.node)))
 
-  @public val coreIoParams = CoreBlockTestIOParams(cioEdge.bundle, cl2Edge.bundle)
+  @public val coreIoParams = BlockTestIOParams(cioEdge.bundle, cl2Edge.bundle, hub.io.cluster.node)
   @public val icn = IO(new ClusterDeviceBundle(node))
-  @public val core = if(removeCore) Some(IO(Vec(node.cpuNum, new CoreBlockTestIO(coreIoParams)))) else None
+  @public val core = if(removeCore) Some(IO(Vec(node.cpuNum, new BlockTestIO(coreIoParams)))) else None
 
   icn <> hub.io.icn
-  hub.io.cluster <> csu.io.hub
-
-  if(removeCore) {
-    for(i <- 0 until node.cpuNum) {
-      core.get(i).l2 <> csu.io.core(i).l2
-      core.get(i).cio <> csu.io.core(i).cio
-      core.get(i).reset := csu.io.core(i).reset
-      core.get(i).clock := csu.io.core(i).clock
-      core.get(i).mhartid <> csu.io.core(i).mhartid
-      if(core.get(i).imsic.isDefined) {
-        core.get(i).imsic.get <> csu.io.core(i).imsic
-      } else {
-        csu.io.core(i).imsic.fromCpu := DontCare
-      }
-      csu.io.core(i).halt := false.B
-      csu.io.core(i).icacheErr := DontCare
-      csu.io.core(i).dcacheErr := DontCare
-      csu.io.core(i).reset_state := false.B
-    }
+  if(removeCsu) {
+    hub.io.cluster := DontCare
   } else {
-    for(i <- 0 until node.cpuNum) csu.io.core(i) <> coreSeq.get(i).io
+    hub.io.cluster <> csu.get.io.hub
+  }
+
+  for(i <- 0 until node.cpuNum) {
+    if(removeCsu) {
+      core.get(i).clock := hub.io.cluster.clock
+      core.get(i).reset := hub.io.cluster.reset
+      connectByName(hub.io.cluster.cio(i).a, core.get(i).cio.a)
+      connectByName(core.get(i).cio.d, hub.io.cluster.cio(i).d)
+      core.get(i).mhartid := hub.io.cluster.cpu.mhartid(i)
+      hub.io.cluster.l2cache <> core.get(i).icn.get
+      if(core.get(i).imsic.isDefined) {
+        core.get(i).imsic.get <> hub.io.cluster.imsic(i)
+      } else {
+        hub.io.cluster.imsic(i).fromCpu := DontCare
+      }
+    } else if(removeCore) {
+      csu.get.io.core(i) := DontCare
+      core.get(i).reset := csu.get.io.core(i).reset
+      core.get(i).clock := csu.get.io.core(i).clock
+      csu.get.io.core(i).cio <> core.get(i).cio
+      csu.get.io.core(i).l2 <> core.get(i).l2.get
+      core.get(i).mhartid := csu.get.io.core(i).mhartid
+      if(core.get(i).imsic.isDefined) {
+        core.get(i).imsic.get <> csu.get.io.core(i).imsic
+      } else {
+        csu.get.io.core(i).imsic.fromCpu := DontCare
+      }
+    } else {
+      csu.get.io.core(i) <> coreSeq.get(i).io
+    }
   }
 }

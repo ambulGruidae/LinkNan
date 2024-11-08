@@ -4,7 +4,7 @@ import chisel3._
 import chisel3.util._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
-import linknan.cluster.{CoreBlockTestIO, CoreBlockTestIOParams}
+import linknan.cluster.{BlockTestIO, BlockTestIOParams}
 import org.chipsalliance.cde.config.Parameters
 import xiangshan.XSCoreParamsKey
 import xs.utils.tl.{TLNanhuBusField, TLNanhuBusKey}
@@ -19,7 +19,7 @@ class SimCoreHubExtIO(cioP:TLBundleParameters, dcP:TLBundleParameters, icP:TLBun
   val mhartid = Output(UInt(p(ZJParametersKey).clusterIdBits.W))
 }
 
-class SimCoreHub(params:CoreBlockTestIOParams)(implicit p: Parameters) extends LazyModule {
+class SimCoreHub(params:BlockTestIOParams)(implicit p: Parameters) extends LazyModule {
   private val icacheImplParams = p(XSCoreParamsKey).icacheParameters
   private val l2tlbImplParams = p(XSCoreParamsKey).l2tlbParameters
   private val icacheOutstanding = icacheImplParams.nMissEntries + icacheImplParams.nReleaseEntries + icacheImplParams.nPrefetchEntries
@@ -79,14 +79,14 @@ class SimCoreHub(params:CoreBlockTestIOParams)(implicit p: Parameters) extends L
     private val icache = icacheNode.out.head._1
     private val l2 = l2Node.in.head._1
     val io = IO(new Bundle {
-      val noc = Flipped(new CoreBlockTestIO(params))
+      val noc = Flipped(new BlockTestIO(params))
       val ext = new SimCoreHubExtIO(params.ioParams, dcache.params, icache.params)
     })
 
     io.ext.clock := io.noc.clock
     io.ext.reset := io.noc.reset
     io.noc.cio <> io.ext.cio
-    io.noc.l2 <> l2
+    io.noc.l2.get <> l2
     io.ext.mhartid := io.noc.mhartid
     io.ext.dcache <> dcache
     io.ext.icache <> icache

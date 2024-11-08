@@ -65,6 +65,11 @@ object ArgParser {
             case TestIoOptionsKey => up(TestIoOptionsKey).copy(removeCore = true)
           }), tail)
 
+        case "--no-csu" :: tail =>
+          parse(config.alter((site, here, up) => {
+            case TestIoOptionsKey => up(TestIoOptionsKey).copy(removeCsu = true)
+          }), tail)
+
         case "--prefix" :: confString :: tail =>
           parse(config.alter((site, here, up) => {
             case PrefixKey => confString

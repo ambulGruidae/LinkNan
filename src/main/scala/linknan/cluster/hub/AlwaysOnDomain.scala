@@ -24,7 +24,7 @@ class AlwaysOnDomainBundle(val node: Node, ioParams:TLBundleParameters)(implicit
   val l2cache = new IcnBundle(node)
   val cio = Vec(node.cpuNum, Flipped(new TLULBundle(cioParams)))
   val cpu = Flipped(new ClusterMiscWires(node))
-  val imisc = Vec(node.cpuNum, new ImsicBundle)
+  val imsic = Vec(node.cpuNum, new ImsicBundle)
   val dft = Output(new DftWires)
   val clock = Output(Clock())
   val reset = Output(AsyncReset())
@@ -84,6 +84,6 @@ class AlwaysOnDomain(node: Node, ioParams:TLBundleParameters)(implicit p: Parame
     io.cluster.cpu.defaultCpuEnable(i) := clusterPeriCx.io.cpu(i).stop
     cioXbar.misc.core(i) := clusterHub.io.cpu.mhartid(i)
     clusterPeriCx.io.cpu(i).coreId := clusterHub.io.cpu.mhartid(i)(clusterIdBits - nodeAidBits - 1, 0)
-    io.cluster.imisc(i) <> clusterPeriCx.io.cpu(i).imsic
+    io.cluster.imsic(i) <> clusterPeriCx.io.cpu(i).imsic
   }
 }

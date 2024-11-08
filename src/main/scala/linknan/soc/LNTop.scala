@@ -5,7 +5,7 @@ import chisel3.experimental.hierarchy.{Definition, Instance}
 import chisel3.experimental.{ChiselAnnotation, annotate}
 import chisel3.util._
 import freechips.rocketchip.diplomacy.MonitorsEnabled
-import linknan.cluster.{CoreBlockTestIO, CpuCluster}
+import linknan.cluster.{BlockTestIO, CpuCluster}
 import linknan.generator.{PrefixKey, TestIoOptionsKey}
 import linknan.soc.uncore.UncoreComplex
 import zhujiang.{DftWires, ZJParametersKey, ZJRawModule, Zhujiang}
@@ -68,7 +68,7 @@ class LNTop(implicit p:Parameters) extends ZJRawModule with ImplicitClock with I
   })))
   private val cpuNum = noc.io.ccn.map(_.node.cpuNum).sum
 
-  val core = if(p(TestIoOptionsKey).removeCore) Some(IO(Vec(cpuNum, new CoreBlockTestIO(nanhuClusterDef.coreIoParams)))) else None
+  val core = if(p(TestIoOptionsKey).doBlockTest) Some(IO(Vec(cpuNum, new BlockTestIO(nanhuClusterDef.coreIoParams)))) else None
 
   for((ccn, i) <- noc.io.ccn.zipWithIndex) {
     val clusterId = ccn.node.clusterId
@@ -95,7 +95,7 @@ class LNTop(implicit p:Parameters) extends ZJRawModule with ImplicitClock with I
       } else {
         cc.icn.misc.defaultCpuEnable(i) := false.B
       }
-      if(p(TestIoOptionsKey).removeCore) core.get(cid) <> cc.core.get(i)
+      if(p(TestIoOptionsKey).doBlockTest) core.get(cid) <> cc.core.get(i)
     }
   }
 }
