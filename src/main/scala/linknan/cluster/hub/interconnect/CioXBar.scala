@@ -7,14 +7,14 @@ import zhujiang.ZJParametersKey
 import zhujiang.chi.ReqAddrBundle
 import zhujiang.tilelink.{BaseTLULXbar, TilelinkParams}
 
-class CioXBar(val mstParams: Seq[TilelinkParams])(implicit p: Parameters) extends BaseTLULXbar {
+class CioXBar(val mstParams: Seq[TilelinkParams], coreNum:Int)(implicit p: Parameters) extends BaseTLULXbar {
   private val coreIdBits = clusterIdBits - nodeAidBits
   private val cpuSpaceBits = p(ZJParametersKey).cpuSpaceBits
   mstParams.foreach(m => require(m.addrBits == raw))
   val slvAddrBits = raw
   val misc = IO(new Bundle {
     val chip = Input(UInt(nodeAidBits.W))
-    val core = Input(Vec(mstParams.length, UInt(coreIdBits.W)))
+    val core = Input(Vec(coreNum, UInt(coreIdBits.W)))
   })
   private def slvMatcher(local: Boolean)(addr: UInt): Bool = {
     val reqAddr = addr.asTypeOf(new ReqAddrBundle)
