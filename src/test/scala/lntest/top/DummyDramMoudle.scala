@@ -51,7 +51,7 @@ class DummyDramMoudle(memParams: AxiParams)(implicit p: Parameters) extends Lazy
       16L * 1024 * 1024 * 1024,
       useBlackBox = true,
       dynamicLatency = p(DebugOptionsKey).UseDRAMSim,
-      pureDram = p(TestIoOptionsKey).removeCore
+      pureDram = p(TestIoOptionsKey).doBlockTest
     )
 
     private val simAXIMem = Module(l_simAXIMem.module)
