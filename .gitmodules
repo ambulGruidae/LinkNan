@@ -12,7 +12,7 @@
 	url = https://github.com/OpenXiangShan/difftest
 [submodule "dependencies/nhl2"]
 	path = dependencies/nhl2
-	url = https://github.com/cyril0124/NHL2
+	url = https://github.com/OpenXiangShan-Nanhu/NHL2
 [submodule "dependencies/rocket-chip"]
 	path = dependencies/rocket-chip
 	url = https://github.com/Siudya/rocket-chip
