@@ -55,7 +55,9 @@ class ClusterSharedUnit(cioEdge: TLEdgeIn, l2EdgeIn: TLEdgeIn, node:Node)(implic
       val core = Vec(node.cpuNum, Flipped(new CoreWrapperIO(cioEdge.bundle, l2EdgeIn.bundle)))
       val hub = Flipped(new AlwaysOnDomainBundle(node, cioOutNode.in.head._2.bundle))
     })
-    private val resetSync = withClockAndReset(io.hub.clock, io.hub.reset) { ResetGen(dft = Some(io.hub.dft.reset))}
+    private val csuEnable = io.hub.cpu.defaultCpuEnable.reduce(_ | _)
+    private val allReset = io.hub.reset.asBool || !csuEnable
+    private val resetSync = withClockAndReset(io.hub.clock, allReset.asAsyncReset) { ResetGen(dft = Some(io.hub.dft.reset))}
     childClock := io.hub.clock
     childReset := resetSync
     def implicitClock = childClock
