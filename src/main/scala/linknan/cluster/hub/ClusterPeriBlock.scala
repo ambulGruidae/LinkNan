@@ -6,7 +6,9 @@ import chisel3.util._
 import freechips.rocketchip.diplomacy.{IdRange, LazyModule, LazyModuleImp}
 import freechips.rocketchip.tilelink.{TLBuffer, TLClientNode, TLMasterParameters, TLMasterPortParameters}
 import linknan.cluster.hub.interconnect.{ClusterPeriParams, PeriXBar}
-import linknan.cluster.hub.peripheral.{ClusterPLL, CpuCtrl}
+import linknan.cluster.hub.peripheral._
+import linknan.cluster.power.controller.{PcsmCtrlIO, PowerControllerTop, PowerMode, devActiveBits}
+import linknan.cluster.power.pchannel.PChannel
 import linknan.soc.LinkNanParamsKey
 import org.chipsalliance.cde.config.Parameters
 import zhujiang.ZJBundle
@@ -54,23 +56,38 @@ class ImsicWrapper(mst:TilelinkParams)(implicit p:Parameters) extends LazyModule
   }
 }
 
-class ClusterPeriCtlBundle(implicit p:Parameters) extends ZJBundle {
+class CpuCtlBundle(implicit p:Parameters) extends ZJBundle {
   val imsic = new ImsicBundle
   val bootAddr = Output(UInt(64.W))
-  val stop = Output(Bool())
+  val pchn = new PChannel(devActiveBits, PowerMode.powerModeBits)
+  val pcsm = new PcsmCtrlIO
   val defaultBootAddr = Input(UInt(64.W))
   val defaultEnable = Input(Bool())
   val coreId = Input(UInt((clusterIdBits - nodeAidBits).W))
+  val blockProbe = Output(Bool())
+}
+
+class CsuCtlBundle(implicit p:Parameters) extends ZJBundle {
+  val pchn = new PChannel(devActiveBits, PowerMode.powerModeBits)
+  val pcsm = new PcsmCtrlIO
+}
+
+class ClusterCtlBundle(implicit p:Parameters) extends ZJBundle {
+  val clusterClkEn = Output(Bool())
+  val pllCfg = Output(Vec(8, UInt(32.W)))
+  val pllLock = Input(Bool())
 }
 
 class ClusterPeriBlock(tlParams: Seq[TilelinkParams], coreNum:Int)(implicit p:Parameters) extends Module {
   private val privateSeq = Seq.tabulate(coreNum)(i => Seq(
     ClusterPeriParams(s"imisc_$i", Seq((0x0000, 0x8000), (0x8000, 0x9000)), Some(i)),
-    ClusterPeriParams(s"cpu_ctl_$i", Seq((0x9000, 0xA000)), Some(i))
+    ClusterPeriParams(s"cpu_boot_ctl_$i", Seq((0x9000, 0xA000)), Some(i)),
+    ClusterPeriParams(s"cpu_pwr_ctl_$i", Seq((0xA000, 0xB000)), Some(i))
   )).reduce(_ ++ _)
 
   private val sharedSeq = Seq(
     ClusterPeriParams("pll", Seq((0x1_0000, 0x2_0000)), None),
+    ClusterPeriParams("csu_pwr_ctl", Seq((0x1_0000, 0x2_0000)), None),
   )
   private val periSeq = privateSeq ++ sharedSeq
   private val periXBar = Module(new PeriXBar(tlParams, periSeq, coreNum))
@@ -81,44 +98,60 @@ class ClusterPeriBlock(tlParams: Seq[TilelinkParams], coreNum:Int)(implicit p:Pa
     _imisc.suggestName(s"imisc_$i")
     (i, _imisc)
   }
-  private val cpuCtlSeq = Seq.tabulate(coreNum) { i=>
-    val cpuCtl = Module(new CpuCtrl(periXBar.io.downstream.head.params))
-    cpuCtl.suggestName(s"cpu_ctl_$i")
+  private val cpuBootCtlSeq = Seq.tabulate(coreNum) { i=>
+    val cpuCtl = Module(new CpuBootCtrl(periXBar.io.downstream.head.params))
+    cpuCtl.suggestName(s"cpu_boot_ctl_$i")
     (i, cpuCtl)
   }
+  private val cpuPwrCtlSeq = Seq.tabulate(coreNum) { i=>
+    val cpuCtl = Module(new PowerControllerTop(periXBar.io.downstream.head.params, false))
+    cpuCtl.suggestName(s"cpu_pwr_ctl_$i")
+    (i, cpuCtl)
+  }
+
   private val pllCtl = Module(new ClusterPLL(periXBar.io.downstream.head.params))
+  private val csuPwrCtl = Module(new PowerControllerTop(periXBar.io.downstream.head.params, true))
+  private val clusterClkEn = cpuPwrCtlSeq.map(_._2.io.pcsmCtrl.clkEn).reduce(_ || _) || csuPwrCtl.io.pcsmCtrl.clkEn
 
   private val downstreams = periSeq.zip(periXBar.io.downstream)
-
-  for((i, imisc) <- imsicSeq) {
-    val cfg = downstreams.filter(_._1.name == s"imisc_$i").map(_._2).head
-    imisc.io.tls <> cfg
+  private def cpuDevConn(tlSeq: Seq[(Int, TLULBundle)], pfx:String):Unit = {
+    for((i, tls) <- tlSeq) {
+      val tlm = downstreams.filter(_._1.name == s"$pfx$i").map(_._2).head
+      tls <> tlm
+    }
   }
-
-  for((i, cpuCtl) <- cpuCtlSeq) {
-    val cfg = downstreams.filter(_._1.name == s"cpu_ctl_$i").map(_._2).head
-    cpuCtl.tls <> cfg
-  }
+  cpuDevConn(imsicSeq.map(e => (e._1, e._2.io.tls)), "imisc_")
+  cpuDevConn(cpuBootCtlSeq.map(e => (e._1, e._2.tls)), "cpu_boot_ctl_")
+  cpuDevConn(cpuPwrCtlSeq.map(e => (e._1, e._2.io.tls)), "cpu_pwr_ctl_")
 
   pllCtl.tls <> downstreams.filter(_._1.name == s"pll").map(_._2).head
+  csuPwrCtl.io.tls <> downstreams.filter(_._1.name == s"csu_pwr_ctl").map(_._2).head
 
   val io = IO(new Bundle{
     val tls = MixedVec(tlParams.map(t => Flipped(new TLULBundle(t))))
-    val cpu = Vec(coreNum, new ClusterPeriCtlBundle)
-    val pllCfg = Output(Vec(8, UInt(32.W)))
-    val pllLock = Input(Bool())
+    val cpu = Vec(coreNum, new CpuCtlBundle)
+    val csu = new CsuCtlBundle
+    val cluster = new ClusterCtlBundle
   })
-  pllCtl.io.lock := io.pllLock
-  io.pllCfg := pllCtl.io.cfg
+  io.cluster.clusterClkEn := RegNext(clusterClkEn)
+  pllCtl.io.lock := io.cluster.pllLock
+  io.cluster.pllCfg := pllCtl.io.cfg
+  io.csu.pchn <> csuPwrCtl.io.pChnMst
+  io.csu.pcsm <> csuPwrCtl.io.pcsmCtrl
+  csuPwrCtl.io.powerOnState := Mux(io.cpu.map(_.defaultEnable).reduce(_ | _), PowerMode.ON, PowerMode.OFF)
+  csuPwrCtl.io.deactivate := false.B
 
   periXBar.cores.zip(io.cpu).foreach({case(a, b) => a := b.coreId})
   io.tls.zip(periXBar.io.upstream).foreach {case(a, b) => a <> b}
 
   for(i <- 0 until coreNum) {
     io.cpu(i).imsic <> imsicSeq(i)._2.io.imsic
-    io.cpu(i).bootAddr := cpuCtlSeq(i)._2.io.cpuBootAddr
-    io.cpu(i).stop := cpuCtlSeq(i)._2.io.cpuReset
-    cpuCtlSeq(i)._2.io.defaultBootAddr := io.cpu(i).defaultBootAddr
-    cpuCtlSeq(i)._2.io.defaultEnable := io.cpu(i).defaultEnable
+    io.cpu(i).bootAddr := cpuBootCtlSeq(i)._2.io.cpuBootAddr
+    io.cpu(i).pchn <> cpuPwrCtlSeq(i)._2.io.pChnMst
+    io.cpu(i).pcsm <> cpuPwrCtlSeq(i)._2.io.pcsmCtrl
+    io.cpu(i).blockProbe := RegNext(cpuPwrCtlSeq(i)._2.io.changing || cpuPwrCtlSeq(i)._2.io.mode < PowerMode.ON)
+    cpuBootCtlSeq(i)._2.io.defaultBootAddr := io.cpu(i).defaultBootAddr
+    cpuPwrCtlSeq(i)._2.io.powerOnState := Mux(io.cpu(i).defaultEnable, PowerMode.ON, PowerMode.OFF)
+    cpuPwrCtlSeq(i)._2.io.deactivate := csuPwrCtl.io.mode === PowerMode.OFF
   }
 }

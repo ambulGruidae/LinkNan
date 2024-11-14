@@ -2,6 +2,7 @@ package linknan
 
 import chisel3._
 import chisel3.util._
+import freechips.rocketchip.tilelink.{TLBundle, TLBundleParameters}
 
 package object utils {
   def connectByName[T <: Bundle](sink: ReadyValidIO[T], src: ReadyValidIO[T]):Unit = {
@@ -12,6 +13,27 @@ package object utils {
     val sendMap = src.bits.elements.map(e => (e._1.toLowerCase, e._2))
     for((name, data) <- recvMap) {
       if(sendMap.contains(name)) data := sendMap(name).asTypeOf(data)
+    }
+  }
+  class BareTLBuffer(params: TLBundleParameters, depth:Int = 2, pipe:Boolean = false) extends Module {
+    val io = IO(new Bundle {
+      val slv = Flipped(new TLBundle(params))
+      val mst = new TLBundle(params)
+    })
+    io.mst.a <> Queue(io.slv.a, entries = depth, pipe = pipe)
+    io.slv.d <> Queue(io.mst.d, entries = depth, pipe = pipe)
+    if(params.hasBCE) {
+      io.slv.b <> Queue(io.mst.b, entries = depth, pipe = pipe)
+      io.mst.c <> Queue(io.slv.c, entries = depth, pipe = pipe)
+      io.mst.e <> Queue(io.slv.e, entries = depth, pipe = pipe)
+    }
+  }
+  object BareTlBuffer {
+    def apply(mst: TLBundle, depth:Int = 2, pipe:Boolean = false, name:Option[String] = None): TLBundle = {
+      val buf = Module(new BareTLBuffer(mst.params, depth = depth, pipe = pipe))
+      name.foreach(n => buf.suggestName(n))
+      buf.io.slv <> mst
+      buf.io.mst
     }
   }
 }

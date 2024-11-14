@@ -8,7 +8,8 @@ import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.interrupts.{IntSourceNode, IntSourcePortSimple}
 import freechips.rocketchip.tilelink._
 import linknan.cluster.hub.ImsicBundle
-import linknan.utils.{TileLinkRationalIO, TileLinkRationalMst}
+import linknan.cluster.power.controller.{PowerMode, devActiveBits}
+import linknan.cluster.power.pchannel.{PChannel, PChannelSlv}
 import org.chipsalliance.cde.config.Parameters
 import utils.IntBuffer
 import xiangshan.{BusErrorUnitInfo, HasXSParameter, XSCore}
@@ -20,11 +21,14 @@ import zhujiang.DftWires
 class CoreWrapperIO(ioParams:TLBundleParameters, l2Params: TLBundleParameters)(implicit p:Parameters) extends Bundle {
   val clock = Input(Clock())
   val reset = Input(AsyncReset())
-  val cio = new TileLinkRationalIO(ioParams)
-  val l2 = new TileLinkRationalIO(l2Params)
+  val cio = new TLBundle(ioParams)
+  val l2 = new TLBundle(l2Params)
+  val pchn = Flipped(new PChannel(devActiveBits, PowerMode.powerModeBits))
+  val pwrEnReq = Input(Bool())
+  val pwrEnAck = Output(Bool())
+  val isoEn = Input(Bool())
   val mhartid = Input(UInt(p(ZJParametersKey).clusterIdBits.W))
   val reset_vector = Input(UInt(p(ZJParametersKey).requestAddrBits.W))
-  val halt = Output(Bool())
   val icacheErr = Output(new BusErrorUnitInfo)
   val dcacheErr = Output(new BusErrorUnitInfo)
   val msip = Input(Bool())
@@ -85,7 +89,7 @@ class CoreWrapper(implicit p:Parameters) extends LazyModule with BindingScope wi
   coreXBar.node :*= TLBuffer.chainNode(1, Some(s"l1d_buffer")) :*= core.exuBlock.memoryBlock.dcache.clientNode
   coreXBar.node :*= TLBuffer.chainNode(1, Some(s"ptw_buffer")) :*= core.ptw_to_l2_buffer.node
   coreXBar.node :*= TLBuffer.chainNode(1, Some(s"l1i_buffer")) :*= core.frontend.icache.clientNode
-  l2Node :*= coreXBar.node
+  l2Node :*= TLBuffer.chainNode(1, Some(s"l2_buffer")) :*= coreXBar.node
   core.clint_int_sink :*= clintIntBuf.node :*= clintIntSrc
   core.plic_int_sink :*= plicIntBuf.node :*= plicIntSrc
   core.debug_int_sink :*= debugIntBuf.node :*= debugIntSrc
@@ -96,8 +100,6 @@ class CoreWrapper(implicit p:Parameters) extends LazyModule with BindingScope wi
   class Impl extends LazyRawModuleImp(this) with ImplicitReset with ImplicitClock {
     private val ioParams = cioNode.in.head._2.bundle
     private val l2Params = l2Node.in.head._2.bundle
-    private val iorc = Module(new TileLinkRationalMst(ioParams))
-    private val l2rc = Module(new TileLinkRationalMst(l2Params))
     @public val io = IO(new CoreWrapperIO(ioParams, l2Params))
     dontTouch(io)
     io.imsic.fromCpu := DontCare
@@ -105,14 +107,22 @@ class CoreWrapper(implicit p:Parameters) extends LazyModule with BindingScope wi
     childReset := withClockAndReset(io.clock, io.reset){ ResetGen(dft = Some(io.dft.reset)) }
     def implicitClock = childClock
     def implicitReset = childReset
-    iorc.io.tls <> cioNode.in.head._1
-    io.cio <> iorc.io.rc
-    l2rc.io.tls <> l2Node.in.head._1
-    io.l2 <> l2rc.io.rc
+    io.cio <> cioNode.in.head._1
+    io.l2 <> l2Node.in.head._1
+
+    private val pSlv = Module(new PChannelSlv(devActiveBits, PowerMode.powerModeBits))
+    pSlv.io.p <> io.pchn
+    pSlv.io.resp.valid := pSlv.io.req.valid
+    pSlv.io.resp.bits := true.B
+    pSlv.io.active := Cat(!core.module.io.cpu_halt, core.module.io.cpu_halt, true.B)
+    io.pwrEnAck := io.pwrEnReq
+    dontTouch(io.pwrEnReq)
+    dontTouch(io.pwrEnAck)
+    dontTouch(io.isoEn)
+    dontTouch(pSlv.io)
 
     core.module.io.hartId := io.mhartid
     core.module.io.reset_vector := io.reset_vector
-    io.halt := withClock(childClock) { RegNextN(core.module.io.cpu_halt, 3) }
     core.module.io.perfEvents := DontCare
     io.icacheErr := core.module.io.l1iErr
     io.dcacheErr := core.module.io.l1dErr
