@@ -38,6 +38,7 @@ class FullNocConfig extends Config((site, here, up) => {
       NodeParam(nodeType = NodeType.S, bankId = 3, splitFlit = true, dpId = 0),
 
       NodeParam(nodeType = NodeType.HI, defaultHni = true, splitFlit = true, attr = "cfg"),
+      NodeParam(nodeType = NodeType.P),
       NodeParam(nodeType = NodeType.RI, attr = "dma", splitFlit = true),
 
       NodeParam(nodeType = NodeType.S, bankId = 3, splitFlit = true, dpId = 1),
@@ -49,6 +50,7 @@ class FullNocConfig extends Config((site, here, up) => {
       NodeParam(nodeType = NodeType.S, bankId = 0, splitFlit = true, dpId = 1),
 
       NodeParam(nodeType = NodeType.S, mainMemory = true, splitFlit = true, outstanding = 32, attr = "ddr_data"),
+      NodeParam(nodeType = NodeType.P),
       NodeParam(nodeType = NodeType.HI, addressRange = (0x3803_0000, 0x3804_0000), splitFlit = true, attr = "ddr_cfg")
     )
   )
