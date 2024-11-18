@@ -27,6 +27,7 @@ class ClusterSharedUnit(cioEdge: TLEdgeIn, l2EdgeIn: TLEdgeIn, node:Node)(implic
     case TLUserKey => TLUserParams(aliasBits = dcacheParams.aliasBitsOpt.getOrElse(0))
     case L2ParamKey => l2Params.copy(
       nrClients = node.cpuNum,
+      alwaysWriteBackFull = true,
       chiBundleParams = Some(CHIBundleParameters(
         nodeIdBits = niw,
         addressBits = raw
