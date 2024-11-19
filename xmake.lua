@@ -92,6 +92,8 @@ task("emu-run", function ()
       {'d', "dump", "k", nil, "dump full wave and disable fork"},
       {'i', "image", "kv", nil, "bin image bin name"},
       {'z', "imagez", "kv", nil, "gz image name"},
+      {'W', "warmup", "kv", "0", "gz image name"},
+      {'I', "instr", "kv", "0", "gz image name"},
       {nil, "case_dir", "kv", "ready-to-run", "image base dir"},
       {nil, "ref", "kv", "riscv64-spike-so", "reference model"},
       {nil, "ref_dir", "kv", "ready-to-run", "reference model base dir"},

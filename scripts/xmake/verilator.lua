@@ -152,6 +152,8 @@ function emu_run()
   local abs_ref_base_dir = path.join(abs_dir, option.get("ref_dir"))
   if option.get("imagez") then image_file = path.join(abs_case_base_dir, option.get("imagez") .. ".gz") end
   if option.get("image") then image_file = path.join(abs_case_base_dir, option.get("image") .. ".bin") end
+  local warmup = option.get("warmup")
+  local instr = option.get("instr")
   local image_basename = path.basename(image_file)
   local sim_dir = path.join("sim", "emu", image_basename)
   local ref_so = path.join(abs_ref_base_dir, option.get("ref"))
@@ -166,6 +168,8 @@ function emu_run()
   else
     sh_str = sh_str .. " --dump-wave-full"
   end
+  if(warmup ~= "0") then sh_str = sh_str .. " -W " .. warmup end
+  if(instr ~= "0") then sh_str = sh_str .. " -I " .. instr end
   sh_str = sh_str .. " --diff " .. ref_so
   sh_str = sh_str .. " -i " .. image_file
   sh_str = sh_str .. " -s " .. option.get("seed")
