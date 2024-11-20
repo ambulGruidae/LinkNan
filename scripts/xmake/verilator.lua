@@ -154,6 +154,8 @@ function emu_run()
   if option.get("image") then image_file = path.join(abs_case_base_dir, option.get("image") .. ".bin") end
   local warmup = option.get("warmup")
   local instr = option.get("instr")
+  local wave_begin = option.get("begin")
+  local wave_end = option.get("end")
   local image_basename = path.basename(image_file)
   local sim_dir = path.join("sim", "emu", image_basename)
   local ref_so = path.join(abs_ref_base_dir, option.get("ref"))
@@ -164,9 +166,11 @@ function emu_run()
   os.cd(sim_dir)
   local sh_str = "chmod +x emu" .. " && ( ./emu"
   if not option.get("dump") then
-    sh_str = sh_str .. " --enable-fork --fork-interval=15"
+    sh_str = sh_str .. " --enable-fork -X " .. option.get("fork")
   else
-    sh_str = sh_str .. " --dump-wave-full"
+    sh_str = sh_str .. " --dump-wave"
+    if(wave_begin ~= "0") then sh_str = sh_str .. " -b " .. wave_begin end
+    if(wave_end ~= "0") then sh_str = sh_str .. " -e " .. wave_end end
   end
   if(warmup ~= "0") then sh_str = sh_str .. " -W " .. warmup end
   if(instr ~= "0") then sh_str = sh_str .. " -I " .. instr end
