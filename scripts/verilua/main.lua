@@ -244,11 +244,6 @@ fork {
             l2_mon_in_slice_1:sample_all(cycles)
             l2_mon_out:sample_all(cycles)
 
-            if cycles % 100000 == 0 then
-                print("Running...", cycles)
-                io.flush()
-            end
-
             cycles = timer:get()
             clock:posedge()
         end
