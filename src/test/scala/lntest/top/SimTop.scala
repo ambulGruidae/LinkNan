@@ -41,11 +41,13 @@ class SimTop(implicit p: Parameters) extends Module {
   private val debugOpts = p(DebugOptionsKey)
 
   private val doBlockTest = p(TestIoOptionsKey).doBlockTest
+  private val hasCsu = p(TestIoOptionsKey).hasCsu
   private val soc = Module(new LNTop)
   private val l_simMMIO = if(doBlockTest) None else Some(LazyModule(new SimMMIO(soc.io.cfg.params, soc.io.dma.params)))
   private val simMMIO = if(doBlockTest) None else Some(Module(l_simMMIO.get.module))
 
   val io = IO(new Bundle(){
+    val simFinal = if(hasCsu) Some(Input(Bool())) else None
     val logCtrl = if(doBlockTest) None else Some(new LogCtrlIO)
     val perfInfo = if(doBlockTest) None else Some(new PerfInfoIO)
     val uart = if(doBlockTest) None else Some(new UARTIO)
@@ -123,6 +125,13 @@ class SimTop(implicit p: Parameters) extends Module {
     soc.io.jtag.part_number := 0.U(16.W)
     soc.io.jtag.version := 0.U(4.W)
     simMMIO.get.io.uart <> io.uart.get
+  }
+
+  if(hasCsu && p(DebugOptionsKey).EnableLuaScoreBoard) {
+    val luaScb = Module(new LuaScoreboard)
+    luaScb.io.clock := clock
+    luaScb.io.reset := reset
+    luaScb.io.sim_final := io.simFinal.get
   }
 
   if(p(TestIoOptionsKey).removeCsu) {

@@ -18,6 +18,7 @@ case class TestIoOptions(
   keepImsic:Boolean = true,
 ) {
   val doBlockTest = removeCore || removeCsu
+  val hasCsu = !removeCsu
 }
 
 class FullNocConfig extends Config((site, here, up) => {
