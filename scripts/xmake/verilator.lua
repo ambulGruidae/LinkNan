@@ -14,7 +14,7 @@ function emu_comp()
     task.run("soc", {
       sim = true, config = option.get("config"),
       dramsim3 = option.get("dramsim3"), enable_perf = not option.get("no_perf"),
-      cpu_sync = option.get("cpu_sync")
+      cpu_sync = option.get("cpu_sync"), lua_scoreboard = option.get("lua_scoreboard")
     })
   end,{
     files = chisel_dep_srcs,

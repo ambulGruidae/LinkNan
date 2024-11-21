@@ -53,6 +53,11 @@ object SimArgParser {
             case DebugOptionsKey => up(DebugOptionsKey).copy(EnableDebug = true)
           }), tail)
 
+        case "--lua-scoreboard" :: tail =>
+          parse(config.alter((site, here, up) => {
+            case DebugOptionsKey => up(DebugOptionsKey).copy(EnableLuaScoreBoard = true)
+          }), tail)
+
         case "--prefix" :: confString :: tail =>
           parse(config.alter((site, here, up) => {
             case PrefixKey => confString
