@@ -92,7 +92,22 @@ function emu_comp()
     cxx_flags = cxx_flags .. " -DEMU_THREAD=" .. option.get("threads")
   end
 
-  local verilator_flags = "verilator --exe --cc --top-module SimTop --assert --x-assign unique --trace"
+  local f = string.format
+  local verilator_bin = "verilator"
+  if option.get("lua_scoreboard") then
+    verilator_bin = "vl-verilator-p"
+  end
+
+  local verilator_flags = f("%s --exe --cc --top-module SimTop --assert --x-assign unique --trace", verilator_bin)
+  if option.get("lua_scoreboard") then
+    io.writefile("$(tmpdir)/ln_config.vlt", [[
+`verilator_config
+public_flat_rd -module "SimTop" -var "timer"
+public_flat_rd -module "SimpleL2CacheDecoupled" -var "*"
+]])
+    verilator_flags = verilator_flags .. " " .. os.tmpdir() .. "/ln_config.vlt"
+  end
+
   verilator_flags = verilator_flags .. " +define+VERILATOR=1 +define+PRINTF_COND=1 +define+DIFFTEST"
   verilator_flags = verilator_flags .. " +define+RANDOMIZE_REG_INIT +define+RANDOMIZE_MEM_INIT"
   verilator_flags = verilator_flags .. " +define+RANDOMIZE_GARBAGE_ASSIGN +define+RANDOMIZE_DELAY=0"
@@ -142,6 +157,7 @@ function emu_comp()
     os.ln(path.join(comp_dir, "emu"), emu_target)
   end
   
+  os.rm("$(tmpdir)/ln_config.vlt")
 end
 
 function emu_run()

@@ -19,15 +19,15 @@ class LuaScoreboard extends BlackBox with HasBlackBoxInline {
        |`ifndef SYNTHESIS
        |  import "DPI-C" function void verilua_init();
        |  import "DPI-C" function void verilua_final();
-       |  import "DPI-C" function void verilua_main_step();
+       |  import "DPI-C" function void verilua_main_step_safe();
        |`ifdef VERILATOR
        |  initial verilua_init();
        |`else
        |  initial #1 verilua_init();
        |`endif
        |
-       |always @ (posedge clock) begin
-       |  if(~reset) verilua_main_step();
+       |always @ (negedge clock) begin
+       |  if(~reset) verilua_main_step_safe();
        |  if(sim_final) verilua_final();
        |end
        |
