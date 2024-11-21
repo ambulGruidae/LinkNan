@@ -9,6 +9,7 @@ import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.interrupts._
 import freechips.rocketchip.tilelink._
 import linknan.cluster.hub.AlwaysOnDomainBundle
+import linknan.generator.TestIoOptionsKey
 import linknan.utils._
 import org.chipsalliance.cde.config.Parameters
 import xiangshan.{HasXSParameter, XSCoreParamsKey}
@@ -56,7 +57,7 @@ class ClusterSharedUnit(cioEdge: TLEdgeIn, l2EdgeIn: TLEdgeIn, node:Node)(implic
       val core = Vec(node.cpuNum, Flipped(new CoreWrapperIO(cioEdge.bundle, l2EdgeIn.bundle)))
       val hub = Flipped(new AlwaysOnDomainBundle(node, cioOutNode.in.head._2.bundle))
     })
-    private val csuEnable = io.hub.cpu.defaultCpuEnable.reduce(_ | _)
+    private val csuEnable = if(p(TestIoOptionsKey).removeCore) true.B else io.hub.cpu.defaultCpuEnable.reduce(_ | _)
     private val allReset = io.hub.reset.asBool || !csuEnable
     private val resetSync = withClockAndReset(io.hub.clock, allReset.asAsyncReset) { ResetGen(dft = Some(io.hub.dft.reset))}
     childClock := io.hub.clock
