@@ -23,7 +23,7 @@ local tl_db = LuaDataBase({
     },
     path = ".",
     file_name = "tl_db.db",
-    save_cnt_max = 10000 * 1,
+    save_cnt_max = 1000000 * 1,
     verbose = false,
 })
 
@@ -43,7 +43,7 @@ local chi_db = LuaDataBase({
     },
     path = ".",
     file_name = "chi_db.db",
-    save_cnt_max = 10000 * 1,
+    save_cnt_max = 1000000 * 1,
     verbose = false,
 })
 
