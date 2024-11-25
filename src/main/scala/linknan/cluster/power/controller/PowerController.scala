@@ -141,7 +141,7 @@ class PowerController(tlParams:TilelinkParams) extends Module {
   pcsmMst.io.defaultPState := currentMode
   devMst.io.defaultPState := currentMode
 
-  io.changing := RegNext(!fsm(sIdle))
+  io.changing := RegNext(!fsm(idleBit))
   io.mode := RegNext(currentMode)
 
   when(fsm(compBit)) {
