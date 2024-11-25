@@ -76,6 +76,12 @@ class CpuCluster(node:Node)(implicit p:Parameters) extends ZJRawModule {
   icn <> hub.io.icn
   if(removeCsu) {
     hub.io.cluster := DontCare
+    hub.io.cluster.csu.pchn.accept := withClock(icn.osc_clock) { RegNext(hub.io.cluster.csu.pchn.req) }
+    hub.io.cluster.csu.pwrEnAck := withClock(icn.osc_clock) { RegNext(hub.io.cluster.csu.pwrEnReq) }
+    hub.io.cluster.cpu.foreach(c =>{
+      c.pchn.accept := withClock(icn.osc_clock) { RegNext(c.pchn.req) }
+      c.pcsm.pwrResp := withClock(icn.osc_clock) { RegNext(c.pcsm.pwrReq) }
+    })
     hub.io.cluster.csu.cio <> _cioXbar.get.io.hub
   } else {
     hub.io.cluster <> _csu.get.io.hub
@@ -95,6 +101,8 @@ class CpuCluster(node:Node)(implicit p:Parameters) extends ZJRawModule {
       }
     } else if(removeCore) {
       _csu.get.io.core(i) := DontCare
+      _csu.get.io.core(i).pchn.accept := withClock(icn.osc_clock) { RegNext(_csu.get.io.core(i).pchn.req) }
+      _csu.get.io.core(i).pwrEnAck := withClock(icn.osc_clock) { RegNext(_csu.get.io.core(i).pwrEnReq) }
       core.get(i).reset := _csu.get.io.core(i).reset
       core.get(i).clock := _csu.get.io.core(i).clock
       _csu.get.io.core(i).cio <> core.get(i).cio
