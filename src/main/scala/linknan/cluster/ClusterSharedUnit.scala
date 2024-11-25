@@ -9,13 +9,15 @@ import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.interrupts._
 import freechips.rocketchip.tilelink._
 import linknan.cluster.hub.AlwaysOnDomainBundle
+import linknan.cluster.power.controller.{PowerMode, devActiveBits}
+import linknan.cluster.power.pchannel.PChannelSlv
 import linknan.generator.TestIoOptionsKey
 import linknan.utils._
 import org.chipsalliance.cde.config.Parameters
 import xiangshan.{HasXSParameter, XSCoreParamsKey}
 import xijiang.Node
 import xijiang.router.base.DeviceIcnBundle
-import xs.utils.ResetGen
+import xs.utils.{ClockGate, ResetGen}
 import xs.utils.tl.{TLUserKey, TLUserParams}
 import zhujiang.HasZJParams
 import zhujiang.chi._
@@ -40,16 +42,16 @@ class ClusterSharedUnit(cioEdge: TLEdgeIn, l2EdgeIn: TLEdgeIn, node:Node)(implic
   private val l2EccIntSink = IntSinkNode(IntSinkPortSimple(1, 1))
   private val l2param = p(L2ParamKey)
   private val cachePortNodes = Seq.fill(node.cpuNum)(TLClientNode(Seq(l2EdgeIn.master)))
-  cachePortNodes.foreach(n => l2xbar.node :*= n)
+  cachePortNodes.zipWithIndex.foreach(n => l2xbar.node :*= TLBuffer.chainNode(1, Some(s"l2_in_buffer_${n._2}")) :*= n._1)
   l2binder.node :*= l2xbar.node
-  for(i <- 0 until l2param.nrSlice) l2cache.sinkNodes(i) :*= TLBuffer.chainNode(2, Some(s"l2_in_buffer")) :*= l2binder.node
+  for(i <- 0 until l2param.nrSlice) l2cache.sinkNodes(i) :*= TLBuffer.chainNode(2, Some(s"l2_bank_buffer")) :*= l2binder.node
   l2EccIntSink := l2cache.eccIntNode
 
   private val cioInNodes = Seq.fill(node.cpuNum)(TLClientNode(Seq(cioEdge.master)))
   private val cioXbar = LazyModule(new TLXbar)
   val cioOutNode = TLManagerNode(Seq(cioEdge.slave))
-  cioInNodes.foreach(n => cioXbar.node :*= n)
-  cioOutNode :*= cioXbar.node
+  cioInNodes.zipWithIndex.foreach(n => cioXbar.node :*= TLBuffer.chainNode(1, Some(s"cio_in_buffer_${n._2}")) :*= n._1)
+  cioOutNode :*= TLBuffer.chainNode(1, Some(s"cio_out_buffer")) :*= cioXbar.node
 
   lazy val module = new Impl
   class Impl extends LazyRawModuleImp(this) with ImplicitClock with ImplicitReset {
@@ -57,81 +59,90 @@ class ClusterSharedUnit(cioEdge: TLEdgeIn, l2EdgeIn: TLEdgeIn, node:Node)(implic
       val core = Vec(node.cpuNum, Flipped(new CoreWrapperIO(cioEdge.bundle, l2EdgeIn.bundle)))
       val hub = Flipped(new AlwaysOnDomainBundle(node, cioOutNode.in.head._2.bundle))
     })
-    private val csuEnable = if(p(TestIoOptionsKey).removeCore) true.B else io.hub.cpu.defaultCpuEnable.reduce(_ | _)
-    private val allReset = io.hub.reset.asBool || !csuEnable
-    private val resetSync = withClockAndReset(io.hub.clock, allReset.asAsyncReset) { ResetGen(dft = Some(io.hub.dft.reset))}
-    childClock := io.hub.clock
+    private val resetSync = withClockAndReset(io.hub.csu.clock, io.hub.csu.reset.asAsyncReset) { ResetGen(dft = Some(io.hub.csu.dft.reset))}
+    childClock := io.hub.csu.clock
     childReset := resetSync
     def implicitClock = childClock
     def implicitReset = childReset
-    private val ioHubRc = Module(new TileLinkRationalMst(cioOutNode.in.head._2.bundle))
-    private val l2HubRc = Module(new DevSideRationalCrossing(node))
+
+    private val pSlv = Module(new PChannelSlv(devActiveBits, PowerMode.powerModeBits))
+    pSlv.io.p <> io.hub.csu.pchn
+    pSlv.io.resp.valid := pSlv.io.req.valid
+    pSlv.io.resp.bits := true.B
+    pSlv.io.active := Cat(true.B, true.B, true.B)
+    io.hub.csu.pwrEnAck := io.hub.csu.pwrEnReq
+    dontTouch(io.hub.csu.pwrEnAck)
+    dontTouch(io.hub.csu.pwrEnReq)
+    dontTouch(io.hub.csu.isoEn)
+    dontTouch(pSlv.io)
 
     for(i <- 0 until node.cpuNum) {
       val core = io.core(i)
-      val l2rc = Module(new TileLinkRationalSlv(l2EdgeIn.bundle))
-      val iorc = Module(new TileLinkRationalSlv(cioEdge.bundle))
-      l2rc.suggestName(s"l2rc_$i")
-      iorc.suggestName(s"iorc_$i")
-      l2rc.io.rc <> core.l2
-      iorc.io.rc <> core.cio
-      cachePortNodes(i).out.head._1 <> l2rc.io.tlm
-      cioInNodes(i).out.head._1 <> iorc.io.tlm
-      core.clock := io.hub.clock
-      val coreReset = io.hub.reset.asBool || !io.hub.cpu.defaultCpuEnable(i)
-      core.reset := withClockAndReset(io.hub.clock, coreReset.asAsyncReset) { ResetGen(dft = Some(io.hub.dft.reset)) }
-      core.mhartid := io.hub.cpu.mhartid(i)
-      core.reset_vector := io.hub.cpu.defaultBootAddr(i)
-      io.hub.cpu.halt(i) := core.halt
-      core.msip := io.hub.cpu.msip(i)
-      core.mtip := io.hub.cpu.mtip(i)
-      core.meip := io.hub.cpu.meip(i)
-      core.seip := io.hub.cpu.seip(i)
-      core.dbip := io.hub.cpu.dbip(i)
-      core.imsic <> io.hub.imsic(i)
-      io.hub.cpu.resetState(i) := core.reset_state
-      io.hub.cpu.beu(i) := DontCare
-      core.dft := io.hub.dft
+      val coreCtl = io.hub.cpu(i)
+      val coreCg = Module(new ClockGate)
+      cachePortNodes(i).out.head._1 <> core.l2
+      cioInNodes(i).out.head._1 <> core.cio
+      coreCg.io.CK := io.hub.csu.clock
+      coreCg.io.E := coreCtl.pcsm.clkEn
+      coreCg.io.TE := false.B
+      core.clock := coreCg.io.Q
+      core.reset := withClockAndReset(io.hub.csu.clock, coreCtl.pcsm.reset.asAsyncReset) { ResetGen(dft = Some(io.hub.csu.dft.reset)) }
+      core.isoEn := coreCtl.pcsm.isoEn
+      core.pwrEnReq := coreCtl.pcsm.pwrReq
+      coreCtl.pcsm.pwrResp := core.pwrEnAck
+      core.pchn <> coreCtl.pchn
+      coreCtl.icacheErr := core.icacheErr
+      coreCtl.dcacheErr := core.dcacheErr
+      core.mhartid := coreCtl.mhartid
+      core.msip := coreCtl.msip
+      core.mtip := coreCtl.mtip
+      core.meip := coreCtl.meip
+      core.seip := coreCtl.seip
+      core.dbip := coreCtl.dbip
+      core.imsic <> coreCtl.imsic
+      core.reset_vector := coreCtl.reset_vector
+      core.dft := io.hub.csu.dft
+      core.l2.b.valid := !coreCtl.blockProbe & cachePortNodes(i).out.head._1.b.valid
+      cachePortNodes(i).out.head._1.b.ready := core.l2.b.ready & !coreCtl.blockProbe
+      coreCtl.reset_state := core.reset_state
     }
-    ioHubRc.io.tls <> cioOutNode.in.head._1
-    ioHubRc.io.tls.a.bits.address := cioOutNode.in.head._1.a.bits.address | (1L << (raw - 1)).U
-    io.hub.cio <> ioHubRc.io.rc
+    io.hub.csu.cio <> cioOutNode.in.head._1
+    io.hub.csu.cio.a.bits.address := cioOutNode.in.head._1.a.bits.address | (1L << (raw - 1)).U
 
     private val l2 = l2cache.module
-    private val l2rcChi = Wire(new DeviceIcnBundle(node))
+    private val l2Chi = Wire(new DeviceIcnBundle(node))
     private val txreq = Wire(Decoupled(new ReqFlit))
     private val txrsp = Wire(Decoupled(new RespFlit))
     private val txdat = Wire(Decoupled(new DataFlit))
     private val rxrsp = Wire(Decoupled(new RespFlit))
     private val rxdat = Wire(Decoupled(new DataFlit))
     private val rxsnp = Wire(Decoupled(new SnoopFlit))
+    
+    io.hub.csu.l2cache <> l2Chi
 
-    l2HubRc.io.rc <> io.hub.l2cache
-    l2HubRc.io.chi <> l2rcChi
+    l2Chi.tx.req.get.valid := txreq.valid
+    txreq.ready := l2Chi.tx.req.get.ready
+    l2Chi.tx.req.get.bits := txreq.bits.asTypeOf(l2Chi.tx.req.get.bits)
 
-    l2rcChi.tx.req.get.valid := txreq.valid
-    txreq.ready := l2rcChi.tx.req.get.ready
-    l2rcChi.tx.req.get.bits := txreq.bits.asTypeOf(l2rcChi.tx.req.get.bits)
+    l2Chi.tx.resp.get.valid := txrsp.valid
+    txrsp.ready := l2Chi.tx.resp.get.ready
+    l2Chi.tx.resp.get.bits := txrsp.bits.asTypeOf(l2Chi.tx.resp.get.bits)
 
-    l2rcChi.tx.resp.get.valid := txrsp.valid
-    txrsp.ready := l2rcChi.tx.resp.get.ready
-    l2rcChi.tx.resp.get.bits := txrsp.bits.asTypeOf(l2rcChi.tx.resp.get.bits)
+    l2Chi.tx.data.get.valid := txdat.valid
+    txdat.ready := l2Chi.tx.data.get.ready
+    l2Chi.tx.data.get.bits := txdat.bits.asTypeOf(l2Chi.tx.data.get.bits)
 
-    l2rcChi.tx.data.get.valid := txdat.valid
-    txdat.ready := l2rcChi.tx.data.get.ready
-    l2rcChi.tx.data.get.bits := txdat.bits.asTypeOf(l2rcChi.tx.data.get.bits)
+    rxrsp.valid := l2Chi.rx.resp.get.valid
+    l2Chi.rx.resp.get.ready := rxrsp.ready
+    rxrsp.bits := l2Chi.rx.resp.get.bits.asTypeOf(rxrsp.bits)
 
-    rxrsp.valid := l2rcChi.rx.resp.get.valid
-    l2rcChi.rx.resp.get.ready := rxrsp.ready
-    rxrsp.bits := l2rcChi.rx.resp.get.bits.asTypeOf(rxrsp.bits)
+    rxdat.valid := l2Chi.rx.data.get.valid
+    l2Chi.rx.data.get.ready := rxdat.ready
+    rxdat.bits := l2Chi.rx.data.get.bits.asTypeOf(rxdat.bits)
 
-    rxdat.valid := l2rcChi.rx.data.get.valid
-    l2rcChi.rx.data.get.ready := rxdat.ready
-    rxdat.bits := l2rcChi.rx.data.get.bits.asTypeOf(rxdat.bits)
-
-    rxsnp.valid := l2rcChi.rx.snoop.get.valid
-    l2rcChi.rx.snoop.get.ready := rxsnp.ready
-    rxsnp.bits := l2rcChi.rx.snoop.get.bits.asTypeOf(rxsnp.bits)
+    rxsnp.valid := l2Chi.rx.snoop.get.valid
+    l2Chi.rx.snoop.get.ready := rxsnp.ready
+    rxsnp.bits := l2Chi.rx.snoop.get.bits.asTypeOf(rxsnp.bits)
 
     connectByName(txreq, l2.io.chi.txreq)
     connectByName(txrsp, l2.io.chi.txrsp)

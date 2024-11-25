@@ -28,8 +28,6 @@ class ClusterMiscWires(node: Node)(implicit p: Parameters) extends ZJBundle {
   val defaultCpuEnable = Input(Vec(node.cpuNum, Bool()))
   val resetState = Output(Vec(node.cpuNum, Bool()))
   val mhartid = Input(Vec(node.cpuNum, UInt(clusterIdBits.W)))
-  val halt = Output(Vec(node.cpuNum, Bool()))
-  val beu = Output(Vec(node.cpuNum, Bool()))
 }
 
 class ClusterDeviceBundle(node: Node)(implicit p: Parameters) extends ZJBundle {
