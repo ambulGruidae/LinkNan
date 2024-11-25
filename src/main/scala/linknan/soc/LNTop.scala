@@ -90,7 +90,7 @@ class LNTop(implicit p:Parameters) extends ZJRawModule with ImplicitClock with I
       cc.icn.misc.mhartid(i) := Cat(io.chip, cid.U((clusterIdBits - nodeAidBits).W))
       uncore.io.resetCtrl.hartIsInReset(cid) := cc.icn.misc.resetState(i)
       cc.icn.misc.defaultBootAddr(i) := io.default_reset_vector
-      if(cid == 0) {
+      if(cid == 0 || p(TestIoOptionsKey).removeCore || p(TestIoOptionsKey).removeCsu) {
         cc.icn.misc.defaultCpuEnable(i) := true.B
       } else {
         cc.icn.misc.defaultCpuEnable(i) := false.B
