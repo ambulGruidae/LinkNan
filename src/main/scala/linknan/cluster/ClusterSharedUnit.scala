@@ -105,6 +105,7 @@ class ClusterSharedUnit(cioEdge: TLEdgeIn, l2EdgeIn: TLEdgeIn, node:Node)(implic
       core.l2.b.valid := !coreCtl.blockProbe & cachePortNodes(i).out.head._1.b.valid
       cachePortNodes(i).out.head._1.b.ready := core.l2.b.ready & !coreCtl.blockProbe
       coreCtl.reset_state := core.reset_state
+      core.pchn.active := coreCtl.pchn.active | Cat(cachePortNodes(i).out.head._1.b.valid, !cachePortNodes(i).out.head._1.b.valid, false.B)
     }
     io.hub.csu.cio <> cioOutNode.in.head._1
     io.hub.csu.cio.a.bits.address := cioOutNode.in.head._1.a.bits.address | (1L << (raw - 1)).U
