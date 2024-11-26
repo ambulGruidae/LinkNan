@@ -27,7 +27,7 @@ class PcsmCtrlIO extends Bundle {
   val reset = Output(Bool())
 }
 
-class PcsmCtrlDriver(isoDelay:Int = 16, clkEnDelay:Int = 16, rstDelay:Int = 64) extends Module {
+class PcsmCtrlDriver(isoDelay:Int = 16, clkEnDelay:Int = 64, rstDelay:Int = 16) extends Module {
   val io = IO(new Bundle {
     val req = Input(Valid(new Bundle{
       val ctrlVec = new PcsmCtrlVec
