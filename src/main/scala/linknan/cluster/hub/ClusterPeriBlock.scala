@@ -86,8 +86,8 @@ class ClusterPeriBlock(tlParams: Seq[TilelinkParams], coreNum:Int)(implicit p:Pa
   )).reduce(_ ++ _)
 
   private val sharedSeq = Seq(
-    ClusterPeriParams("pll", Seq((0x1_0000, 0x2_0000)), None),
-    ClusterPeriParams("csu_pwr_ctl", Seq((0x1_0000, 0x2_0000)), None),
+    ClusterPeriParams("pll", Seq((0x1_0000, 0x1_1000)), None),
+    ClusterPeriParams("csu_pwr_ctl", Seq((0x1_1000, 0x1_2000)), None),
   )
   private val periSeq = privateSeq ++ sharedSeq
   private val periXBar = Module(new PeriXBar(tlParams, periSeq, coreNum))
