@@ -148,6 +148,7 @@ task("simv-run", function ()
       {nil, "no_diff", "k", nil, "disable difftest"},
       {'i', "image", "kv", nil, "bin image bin name"},
       {'z', "imagez", "kv", nil, "gz image name"},
+      {'c', "cycles", "kv", "0", "gz image name"},
       {nil, "case_dir", "kv", "ready-to-run", "image base dir"},
       {nil, "ref", "kv", "riscv64-spike-so", "reference model"},
       {nil, "ref_dir", "kv", "ready-to-run", "reference model base dir"}

@@ -161,6 +161,7 @@ function simv_run()
   else
     sh_str = sh_str .. " +no-diff"
   end
+  sh_str = sh_str .. " +max-cycles=" .. option.get("cycles")
   sh_str = sh_str .. " +workload=" .. image_file
   sh_str = sh_str .. " -fgp=num_threads:4,num_fsdb_threads:4"
   sh_str = sh_str .. " -assert finish_maxfail=30"
