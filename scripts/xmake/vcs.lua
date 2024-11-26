@@ -2,7 +2,7 @@ import("core.base.option")
 import("core.project.depend")
 import("core.base.task")
 
-function simv_comp()
+function simv_comp(num_cores)
   if not option.get("no_fsdb") then
     if not os.getenv("VERDI_HOME") then
       print("error: VERDI_HOME is not set!")
@@ -72,7 +72,7 @@ function simv_comp()
   end
   io.writefile(csrc_filelist_path, csrc_filelist_contents)
 
-  local cxx_flags = "-std=c++17 -static -Wall -DNUM_CORES=1"
+  local cxx_flags = "-std=c++17 -static -Wall -DNUM_CORES=" .. num_cores
   cxx_flags = cxx_flags .. " -I" .. design_csrc
   cxx_flags = cxx_flags .. " -I" .. difftest_csrc_common
   cxx_flags = cxx_flags .. " -I" .. difftest_csrc_difftest

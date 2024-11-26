@@ -83,7 +83,11 @@ task("emu", function()
   }
 
   on_run(function()
-    import("scripts.xmake.verilator").emu_comp()
+    import("core.base.option")
+    local num_cores = "1"
+    if option.get("config") == "full" then num_cores = 8 end
+    if option.get("config") == "reduced" then num_cores = 4 end
+    import("scripts.xmake.verilator").emu_comp(num_cores)
   end)
 end)
 
@@ -127,7 +131,11 @@ task("simv", function()
   }
 
   on_run(function()
-    import("scripts.xmake.vcs").simv_comp()
+    import("core.base.option")
+    local num_cores = "1"
+    if option.get("config") == "full" then num_cores = 8 end
+    if option.get("config") == "reduced" then num_cores = 4 end
+    import("scripts.xmake.vcs").simv_comp(num_cores)
   end)
 end)
 
@@ -161,7 +169,7 @@ task("verdi", function ()
     }
   }
 
-  on_run(function () 
+  on_run(function ()
     import("scripts.xmake.verdi").verdi()
   end)
 end)

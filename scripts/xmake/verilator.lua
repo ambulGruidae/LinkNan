@@ -2,7 +2,7 @@ import("core.base.option")
 import("core.project.depend")
 import("core.base.task")
 
-function emu_comp()
+function emu_comp(num_cores)
   local abs_base = os.curdir()
   local chisel_dep_srcs = os.iorun("find " .. abs_base .. " -name \"*.scala\""):split('\n')
   table.join2(chisel_dep_srcs, {path.join(abs_base, "build.sc")})
@@ -65,7 +65,7 @@ function emu_comp()
   end
   io.writefile(csrc_filelist_path, csrc_filelist_contents)
 
-  local cxx_flags = "-std=c++17 -DVERILATOR -DNUM_CORES=1"
+  local cxx_flags = "-std=c++17 -DVERILATOR -DNUM_CORES=" .. num_cores
   local cxx_ldflags = "-ldl -lrt -lpthread -lsqlite3 -lz"
   cxx_flags = cxx_flags .. " -I" .. difftest_config
   cxx_flags = cxx_flags .. " -I" .. design_csrc
