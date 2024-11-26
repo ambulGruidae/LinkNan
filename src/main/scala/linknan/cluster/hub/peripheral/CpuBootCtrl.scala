@@ -10,6 +10,7 @@ class CpuBootCtrl(tlParams: TilelinkParams)(implicit p: Parameters) extends Base
     val defaultBootAddr = Input(UInt(64.W))
     val cpuBootAddr = Output(UInt(64.W))
   })
+  val addrBits = 12
   private val addrReg = Reg(UInt(64.W))
   private val addrWire = WireInit(addrReg)
 

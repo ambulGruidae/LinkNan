@@ -13,6 +13,7 @@ class DistributedAclint(tlParams: TilelinkParams)(implicit p: Parameters) extend
     val mtime = Input(UInt(64.W))
     val mtimeUpdate = Output(Valid(UInt(64.W)))
   })
+  val addrBits = 12
   private val msip = RegInit(0.U(32.W))
   private val ssip = RegInit(0.U(32.W))
   private val mtimecmp = RegInit(0.U(64.W))

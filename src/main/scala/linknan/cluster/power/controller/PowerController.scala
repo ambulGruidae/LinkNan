@@ -46,6 +46,7 @@ class PwrCtlIntrExtIO extends Bundle {
 
 class PwrCtlTlIntf(tlParams:TilelinkParams) extends BaseTLULPeripheral(tlParams) {
   override def resetType: Module.ResetType.Type = Module.ResetType.Synchronous
+  val addrBits = 12
   val ctl = IO(new PwrCtlBundle)
   val ext = IO(new PwrCtlIntrExtIO)
   private val policyInit = Wire(new PolicyBundle)

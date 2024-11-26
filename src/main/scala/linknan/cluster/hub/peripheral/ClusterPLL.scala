@@ -11,6 +11,7 @@ class ClusterPLL(tlParams: TilelinkParams)(implicit p: Parameters) extends BaseT
     val cfg = Output(Vec(8, UInt(32.W)))
     val lock = Input(Bool())
   })
+  val addrBits = 12
   private val cfgReg = RegInit(VecInit(Seq.fill(8)(0.U(32.W))))
   private val lock = WireInit(0.U(32.W))
   val regSeq = Seq.tabulate(8)(i =>
