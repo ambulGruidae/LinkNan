@@ -98,7 +98,7 @@ function emu_comp(num_cores)
     verilator_bin = "vl-verilator-p"
   end
 
-  local verilator_flags = f("%s --exe --cc --top-module SimTop --assert --x-assign unique --trace", verilator_bin)
+  local verilator_flags = f("%s --exe --cc --top-module SimTop --assert --x-assign unique", verilator_bin)
   if option.get("lua_scoreboard") then
     io.writefile("$(tmpdir)/ln_config.vlt", [[
 `verilator_config
@@ -115,6 +115,9 @@ public_flat_rd -module "SimpleL2CacheDecoupled" -var "*"
   verilator_flags = verilator_flags .. " --stats-vars --output-split 30000 -output-split-cfuncs 30000"
   if option.get("threads") then
     verilator_flags = verilator_flags .. " --threads " .. option.get("threads") .. " --threads-dpi all"
+  end
+  if not option.get("fast") then
+    verilator_flags = verilator_flags .. " --trace"
   end
   verilator_flags = verilator_flags .. " -CFLAGS \"" .. cxx_flags .. "\""
   verilator_flags = verilator_flags .. " -LDFLAGS \"" .. cxx_ldflags .. "\""
@@ -181,12 +184,12 @@ function emu_run()
   os.ln(path.join(abs_dir, "sim", "emu", "comp", "emu"), sim_emu)
   os.cd(sim_dir)
   local sh_str = "chmod +x emu" .. " && ( ./emu"
-  if not option.get("dump") then
-    sh_str = sh_str .. " --enable-fork -X " .. option.get("fork")
-  else
+  if option.get("dump") then
     sh_str = sh_str .. " --dump-wave"
     if(wave_begin ~= "0") then sh_str = sh_str .. " -b " .. wave_begin end
     if(wave_end ~= "0") then sh_str = sh_str .. " -e " .. wave_end end
+  elseif option.get("fork") ~= "0" then
+    sh_str = sh_str .. " --enable-fork -X " .. option.get("fork")
   end
   if(warmup ~= "0") then sh_str = sh_str .. " -W " .. warmup end
   if(instr ~= "0") then sh_str = sh_str .. " -I " .. instr end

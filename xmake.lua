@@ -73,6 +73,7 @@ task("emu", function()
       {'d', "dramsim3", "k", nil, "use dramsim3"},
       {'p', "no_perf", "k", nil, "disable perf counter"},
       {'S', "cpu_sync", "k", nil, "use same clock to cpu cluster and noc"},
+      {'f', "fast", "k", nil, "disable trace to improve simulation speed"},
       {'l', "lua_scoreboard", "k", nil, "use lua scoreboard for cache debug"},
       {'h', "dramsim3_home", "kv", path.join(os.curdir(), "dependencies", "dramsim"), "dramsim3 home dir"},
       {'t', "threads", "kv", "16", "simulation threads"},
