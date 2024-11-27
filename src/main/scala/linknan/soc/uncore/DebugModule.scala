@@ -2,7 +2,7 @@ package linknan.soc.uncore
 
 import chisel3._
 import freechips.rocketchip.devices.debug.{DebugCustomXbar, DebugIO, DebugModuleKey, DebugModuleParams, DebugTransportModuleJTAG, JtagDTMKeyDefault, ResetCtrlIO, SystemJTAGIO, TLDebugModule}
-import freechips.rocketchip.diplomacy.{LazyModule, LazyRawModuleImp}
+import org.chipsalliance.diplomacy.lazymodule._
 import org.chipsalliance.cde.config.Parameters
 
 class DebugModule(numCores: Int)(implicit p: Parameters) extends LazyModule {

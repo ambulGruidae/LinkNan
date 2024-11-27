@@ -13,9 +13,6 @@
 [submodule "dependencies/nhl2"]
 	path = dependencies/nhl2
 	url = https://github.com/OpenXiangShan-Nanhu/NHL2
-[submodule "dependencies/rocket-chip"]
-	path = dependencies/rocket-chip
-	url = https://github.com/Siudya/rocket-chip
 [submodule "ready-to-run"]
 	path = ready-to-run
 	url = https://github.com/Siudya/ready-to-run
@@ -35,3 +32,9 @@
 	path = dependencies/aia
 	url = https://github.com/OpenXiangShan-Nanhu/ChiselAIA
 	branch = main
+[submodule "dependencies/rocket-chip"]
+	path = dependencies/rocket-chip
+	url = https://github.com/OpenXiangShan-Nanhu/rocket-chip
+[submodule "dependencies/diplomacy"]
+	path = dependencies/diplomacy
+	url = https://github.com/chipsalliance/diplomacy

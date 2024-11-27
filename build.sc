@@ -34,13 +34,15 @@ object cde extends CommonModule {
   override def millSourcePath = os.pwd / "dependencies" / "cde" / "cde"
 }
 
-object hardfloat extends CommonModule {
-  override def millSourcePath = os.pwd / "dependencies" / "hardfloat" / "hardfloat"
+object diplomacy extends CommonModule {
+  override def millSourcePath = os.pwd / "dependencies" / "diplomacy" / "diplomacy"
+  override def moduleDeps = super.moduleDeps ++ Seq(cde)
+  def sourcecodeIvy = ivy"com.lihaoyi::sourcecode:0.3.1"
 }
 
 object rocketchip extends millbuild.dependencies.`rocket-chip`.common.RocketChipModule {
-  override def millSourcePath = os.pwd / "dependencies" / "rocket-chip"
   def scalaVersion: T[String] = T(defaultVersions("scala"))
+  override def millSourcePath = os.pwd / "dependencies" / "rocket-chip"
   def chiselModule = None
   def chiselPluginJar = None
   def chiselIvy = Some(getVersion("chisel"))
@@ -48,10 +50,16 @@ object rocketchip extends millbuild.dependencies.`rocket-chip`.common.RocketChip
   def macrosModule = macros
   def hardfloatModule = hardfloat
   def cdeModule = cde
+  def diplomacyModule = diplomacy
+  def diplomacyIvy = None
   def mainargsIvy = ivy"com.lihaoyi::mainargs:0.5.0"
   def json4sJacksonIvy = ivy"org.json4s::json4s-jackson:4.0.5"
 
-  object macros extends millbuild.dependencies.`rocket-chip`.common.MacrosModule {
+  object hardfloat extends CommonModule {
+    override def millSourcePath = os.pwd / "dependencies" / "hardfloat" / "hardfloat"
+  }
+
+  object macros extends millbuild.dependencies.`rocket-chip`.common.MacrosModule with SbtModule {
     def scalaVersion: T[String] = T(defaultVersions("scala"))
     def scalaReflectIvy = ivy"org.scala-lang:scala-reflect:${defaultVersions("scala")}"
   }

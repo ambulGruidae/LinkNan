@@ -4,9 +4,11 @@ import chisel3._
 import chisel3.util._
 import SimpleL2.Configs.L2ParamKey
 import chisel3.experimental.hierarchy.{instantiable, public}
-import freechips.rocketchip.diplomacy._
+import freechips.rocketchip.diplomacy.{AddressSet, RegionType, TransferSizes}
+import org.chipsalliance.diplomacy.lazymodule._
 import freechips.rocketchip.interrupts.{IntSourceNode, IntSourcePortSimple}
 import freechips.rocketchip.tilelink._
+import freechips.rocketchip.resources.BindingScope
 import linknan.cluster.hub.ImsicBundle
 import linknan.cluster.power.controller.{PowerMode, devActiveBits}
 import linknan.cluster.power.pchannel.{PChannel, PChannelSlv}
@@ -98,6 +100,7 @@ class CoreWrapper(implicit p:Parameters) extends LazyModule with BindingScope wi
   lazy val module = new Impl
   @instantiable
   class Impl extends LazyRawModuleImp(this) with ImplicitReset with ImplicitClock {
+    override def provideImplicitClockToLazyChildren = true
     private val ioParams = cioNode.in.head._2.bundle
     private val l2Params = l2Node.in.head._2.bundle
     @public val io = IO(new CoreWrapperIO(ioParams, l2Params))
