@@ -72,6 +72,7 @@ task("emu", function()
       {'s', "sparse_mem", "k", nil, "use sparse mem"},
       {'d', "dramsim3", "k", nil, "use dramsim3"},
       {'p', "no_perf", "k", nil, "disable perf counter"},
+      {'n', "no_diff", "k", nil, "disable difftest"},
       {'S', "cpu_sync", "k", nil, "use same clock to cpu cluster and noc"},
       {'f', "fast", "k", nil, "disable trace to improve simulation speed"},
       {'l', "lua_scoreboard", "k", nil, "use lua scoreboard for cache debug"},

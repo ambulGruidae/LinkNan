@@ -14,7 +14,8 @@ function emu_comp(num_cores)
     task.run("soc", {
       sim = true, config = option.get("config"),
       dramsim3 = option.get("dramsim3"), enable_perf = not option.get("no_perf"),
-      cpu_sync = option.get("cpu_sync"), lua_scoreboard = option.get("lua_scoreboard")
+      cpu_sync = option.get("cpu_sync"), lua_scoreboard = option.get("lua_scoreboard"),
+      clean_difftest = option.get("no_diff")
     })
   end,{
     files = chisel_dep_srcs,
@@ -41,15 +42,18 @@ function emu_comp(num_cores)
 
   local csrc = os.files(path.join(design_csrc, "*.cpp"))
   table.join2(csrc, os.files(path.join(difftest_csrc_common, "*.cpp")))
-  table.join2(csrc, os.files(path.join(difftest_csrc_difftest, "*.cpp")))
   table.join2(csrc, os.files(path.join(difftest_csrc_spikedasm, "*.cpp")))
   table.join2(csrc, os.files(path.join(difftest_csrc_verilator, "*.cpp")))
 
   local headers = os.files(path.join(design_csrc, "*.h"))
   table.join2(headers, os.files(path.join(difftest_csrc_common, "*.h")))
-  table.join2(headers, os.files(path.join(difftest_csrc_difftest, "*.h")))
   table.join2(headers, os.files(path.join(difftest_csrc_spikedasm, "*.h")))
   table.join2(headers, os.files(path.join(difftest_csrc_verilator, "*.h")))
+
+  if not option.get("no_diff") then
+    table.join2(csrc, os.files(path.join(difftest_csrc_difftest, "*.cpp")))
+    table.join2(headers, os.files(path.join(difftest_csrc_difftest, "*.h")))
+  end
 
   local vsrc_filelist_path = path.join(comp_dir, "vsrc.f")
   local vsrc_filelist_contents = ""
@@ -90,6 +94,9 @@ function emu_comp(num_cores)
   end
   if option.get("threads") then
     cxx_flags = cxx_flags .. " -DEMU_THREAD=" .. option.get("threads")
+  end
+  if option.get("no_diff") then
+    cxx_flags = cxx_flags .. " -DCONFIG_NO_DIFFTEST"
   end
 
   local f = string.format
