@@ -112,7 +112,7 @@ function emu_comp(num_cores)
 public_flat_rd -module "SimTop" -var "timer"
 public_flat_rd -module "SimpleL2CacheDecoupled" -var "*"
 ]])
-    verilator_flags = verilator_flags .. " " .. os.tmpdir() .. "/ln_config.vlt"
+    verilator_flags = verilator_flags .. " " .. path.join(os.tmpdir(), "ln_config.vlt")
   end
 
   verilator_flags = verilator_flags .. " +define+VERILATOR=1 +define+PRINTF_COND=1 +define+DIFFTEST"
@@ -135,11 +135,20 @@ public_flat_rd -module "SimpleL2CacheDecoupled" -var "*"
   verilator_flags = verilator_flags .. " -o " .. comp_target
 
   os.cd(comp_dir)
-  io.writefile("verilator_cmd.sh", verilator_flags)
+  local cmd_file = path.join(comp_dir, "verilator_cmd.sh")
+  if os.exists(cmd_file) then
+    local fileStr = io.readfile(cmd_file)
+    if fileStr ~= verilator_flags then
+      io.writefile(cmd_file, verilator_flags)
+    end
+  else
+    io.writefile(cmd_file, verilator_flags)
+  end
 
   local verilator_depends_files = vsrc
   table.join2(verilator_depends_files, { path.join(abs_base, "scripts", "xmake", "verilator.lua") })
   table.join2(verilator_depends_files, { path.join(abs_base, "scripts", "xmake", "dramsim.lua") })
+  table.join2(verilator_depends_files, { cmd_file })
 
   depend.on_changed(function()
     print(verilator_flags)
