@@ -189,6 +189,7 @@ function emu_run()
   if option.get("image") then image_file = path.join(abs_case_base_dir, option.get("image") .. ".bin") end
   local warmup = option.get("warmup")
   local instr = option.get("instr")
+  local cycles = option.get("cycles")
   local wave_begin = option.get("begin")
   local wave_end = option.get("end")
   local image_basename = path.basename(image_file)
@@ -209,6 +210,7 @@ function emu_run()
   end
   if(warmup ~= "0") then sh_str = sh_str .. " -W " .. warmup end
   if(instr ~= "0") then sh_str = sh_str .. " -I " .. instr end
+  if(cycles ~= "0") then sh_str = sh_str .. " -C " .. cycles end
   sh_str = sh_str .. " --diff " .. ref_so
   sh_str = sh_str .. " -i " .. image_file
   sh_str = sh_str .. " -s " .. option.get("seed")

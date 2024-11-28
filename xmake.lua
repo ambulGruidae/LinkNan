@@ -101,6 +101,7 @@ task("emu-run", function ()
       {'d', "dump", "k", nil, "dump full wave and disable fork"},
       {'i', "image", "kv", nil, "bin image bin name"},
       {'z', "imagez", "kv", nil, "gz image name"},
+      {'c', "cycles", "kv", "0", "simlation max cycles"},
       {'X', "fork", "kv", "15", "lightSSS fork interval in seconds, ignored when --dump is assigned"},
       {'b', "begin", "kv", "0", "begin time of waveform, ignored when --dump is not assigned"},
       {'e', "end", "kv", "0", "end time of waveform, ignored when --dump is not assigned"},
