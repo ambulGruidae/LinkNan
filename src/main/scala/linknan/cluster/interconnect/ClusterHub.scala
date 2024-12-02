@@ -78,21 +78,23 @@ class ClusterHub(node: Node)(implicit p: Parameters) extends ZJModule {
   private val icnRxRsp = rxChnMap("RSP")
   private val icnRxDat = rxChnMap("DAT")
   private val icnRxSnp = rxChnMap("SNP")
-  private val icnRxRspAid = icnRxRsp.bits.asTypeOf(new RespFlit).TgtID.asTypeOf(new NodeIdBundle).aid
-  private val icnRxDatAid = icnRxDat.bits.asTypeOf(new DataFlit).TgtID.asTypeOf(new NodeIdBundle).aid
+  private val icnRxRspTxn = icnRxRsp.bits.asTypeOf(new RespFlit).TxnID
+  private val icnRxRspAid = icnRxRspTxn(icnRxRspTxn.getWidth - 2, icnRxRspTxn.getWidth - 3)
+  private val icnRxDatTxn = icnRxDat.bits.asTypeOf(new DataFlit).TxnID
+  private val icnRxDatAid = icnRxDatTxn(icnRxDatTxn.getWidth - 2, icnRxDatTxn.getWidth - 3)
 
   io.peripheral.tx.req.get.valid := icnRxReq.valid
   io.peripheral.tx.req.get.bits := icnRxReq.bits.asTypeOf(io.peripheral.tx.req.get.bits)
-  io.peripheral.tx.resp.get.valid := icnRxRsp.valid && icnRxRspAid === 0.U
+  io.peripheral.tx.resp.get.valid := icnRxRsp.valid && icnRxRspAid === 1.U
   io.peripheral.tx.resp.get.bits := icnRxRsp.bits.asTypeOf(io.peripheral.tx.resp.get.bits)
-  io.peripheral.tx.data.get.valid := icnRxDat.valid && icnRxDatAid === 0.U
+  io.peripheral.tx.data.get.valid := icnRxDat.valid && icnRxDatAid === 1.U
   io.peripheral.tx.data.get.bits := icnRxDat.bits.asTypeOf(io.peripheral.tx.data.get.bits)
 
   io.l2cache.tx.snoop.get.valid := icnRxSnp.valid
   io.l2cache.tx.snoop.get.bits := icnRxSnp.bits.asTypeOf(io.l2cache.tx.snoop.get.bits)
-  io.l2cache.tx.resp.get.valid := icnRxRsp.valid && icnRxRspAid === 1.U
+  io.l2cache.tx.resp.get.valid := icnRxRsp.valid && icnRxRspAid === 0.U
   io.l2cache.tx.resp.get.bits := icnRxRsp.bits.asTypeOf(io.l2cache.tx.resp.get.bits)
-  io.l2cache.tx.data.get.valid := icnRxDat.valid && icnRxDatAid === 1.U
+  io.l2cache.tx.data.get.valid := icnRxDat.valid && icnRxDatAid === 0.U
   io.l2cache.tx.data.get.bits := icnRxDat.bits.asTypeOf(io.l2cache.tx.data.get.bits)
 
   io.cio.tx.resp.get.valid := icnRxRsp.valid && icnRxRspAid === 2.U
@@ -103,13 +105,13 @@ class ClusterHub(node: Node)(implicit p: Parameters) extends ZJModule {
   icnRxReq.ready := io.peripheral.tx.req.get.ready
   icnRxSnp.ready := io.l2cache.tx.snoop.get.ready
   icnRxRsp.ready := MuxCase(false.B, Seq(
-    (icnRxRspAid === 0.U, io.peripheral.tx.resp.get.ready),
-    (icnRxRspAid === 1.U, io.l2cache.tx.resp.get.ready),
+    (icnRxRspAid === 1.U, io.peripheral.tx.resp.get.ready),
+    (icnRxRspAid === 0.U, io.l2cache.tx.resp.get.ready),
     (icnRxRspAid === 2.U, io.cio.tx.resp.get.ready)
   ))
   icnRxDat.ready := MuxCase(false.B, Seq(
-    (icnRxDatAid === 0.U, io.peripheral.tx.data.get.ready),
-    (icnRxDatAid === 1.U, io.l2cache.tx.data.get.ready),
+    (icnRxDatAid === 1.U, io.peripheral.tx.data.get.ready),
+    (icnRxDatAid === 0.U, io.l2cache.tx.data.get.ready),
     (icnRxDatAid === 2.U, io.cio.tx.data.get.ready)
   ))
 
@@ -141,20 +143,21 @@ class ClusterHub(node: Node)(implicit p: Parameters) extends ZJModule {
     arbin.valid := icnRxChn.valid
     icnRxChn.ready := arbin.ready
     val icnRxChnFlit = WireInit(icnRxChn.bits.asTypeOf(flitMap(chn)))
-    val icnRxChnSrcId = WireInit(0.U.asTypeOf(new NodeIdBundle))
-    icnRxChnFlit.src := icnRxChnSrcId.asUInt
-    icnRxChnSrcId.aid := aid.U
+    val icnRxChnFlit2 = WireInit(icnRxChn.bits.asTypeOf(flitMap(chn)))
+    val icnRxChnTxnId = WireInit(0.U.asTypeOf(icnRxChnFlit.txn))
+    icnRxChnFlit.txn := icnRxChnTxnId.asUInt
+    icnRxChnTxnId := Cat(icnRxChnFlit2.txn.head(1),aid.asUInt(2.W),icnRxChnFlit2.txn(icnRxChnFlit2.txn.getWidth-4,0))
     arbin.bits := icnRxChnFlit.asUInt
   }
 
-  txConn(icnTxReqArb.io.in(0), io.l2cache, 1, "REQ")
+  txConn(icnTxReqArb.io.in(0), io.l2cache, 0, "REQ")
   txConn(icnTxReqArb.io.in(1), io.cio, 2, "REQ")
 
-  txConn(icnTxRespArb.io.in(0), io.peripheral, 0, "RSP")
-  txConn(icnTxRespArb.io.in(1), io.l2cache, 1, "RSP")
+  txConn(icnTxRespArb.io.in(0), io.peripheral, 1, "RSP")
+  txConn(icnTxRespArb.io.in(1), io.l2cache, 0, "RSP")
   txConn(icnTxRespArb.io.in(2), io.cio, 2, "RSP")
 
-  txConn(icnTxDataArb.io.in(0), io.peripheral, 0, "DAT")
-  txConn(icnTxDataArb.io.in(1), io.l2cache, 1, "DAT")
+  txConn(icnTxDataArb.io.in(0), io.peripheral, 1, "DAT")
+  txConn(icnTxDataArb.io.in(1), io.l2cache, 0, "DAT")
   txConn(icnTxDataArb.io.in(2), io.cio, 2, "DAT")
 }
